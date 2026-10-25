@@ -11,17 +11,23 @@ from .backend import (
     ScriptedModel,
 )
 from .memory import (
-    FileMemoryStore,
+    FileMemoryStore, SqliteMemoryStore,
     InMemoryStore,
     Memory,
     MemoryStore,
     SummarizingMemory,
     estimate_tokens,
 )
+from .retrieval import BM25Index, Passage, Retriever, VectorIndex, chunk_text
 from .prompt import Prompt, describe_tools, render_instructions
 from .tool import Tool, ToolRegistry, infer_schema, parse_tool_arguments, tool
 
 __all__ = [
+    "Retriever",
+    "Passage",
+    "BM25Index",
+    "VectorIndex",
+    "chunk_text",
     "Agent",
     "AgentResult",
     "extract_json",
@@ -45,6 +51,7 @@ __all__ = [
     "MemoryStore",
     "InMemoryStore",
     "FileMemoryStore",
+    "SqliteMemoryStore",
     "SummarizingMemory",
     "estimate_tokens",
 ]

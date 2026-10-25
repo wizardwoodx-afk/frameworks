@@ -119,6 +119,85 @@ class FileMemoryStore(MemoryStoreBase):
 # --------------------------------------------------------------------------
 # memory policies
 # --------------------------------------------------------------------------
+class SqliteMemoryStore(MemoryStoreBase):
+    """Durable message history in a SQLite file (standard library).
+
+    One row per message, indexed by ``(thread_id, seq)``. Safe for concurrent
+    processes, and readable with any SQLite client — useful when a production
+    incident needs "what did the agent actually see?".
+    """
+
+    SCHEMA = """
+        CREATE TABLE IF NOT EXISTS messages (
+            thread_id TEXT NOT NULL,
+            seq       INTEGER NOT NULL,
+            payload   TEXT NOT NULL,
+            PRIMARY KEY (thread_id, seq)
+        )
+    """
+
+    def __init__(self, path: str | os.PathLike[str] = ":memory:") -> None:
+        import sqlite3
+
+        self.path = str(path)
+        self._lock = threading.RLock()
+        if self.path != ":memory:":
+            Path(self.path).parent.mkdir(parents=True, exist_ok=True)
+        self._conn = sqlite3.connect(self.path, check_same_thread=False, timeout=10)
+        self._conn.execute("PRAGMA journal_mode=WAL")
+        self._conn.execute(self.SCHEMA)
+        self._conn.commit()
+
+    def append(self, thread_id: str, messages: Sequence[Message]) -> None:
+        if not messages:
+            return
+        with self._lock:
+            row = self._conn.execute(
+                "SELECT COALESCE(MAX(seq), 0) FROM messages WHERE thread_id = ?",
+                (thread_id,),
+            ).fetchone()
+            seq = int(row[0]) if row else 0
+            self._conn.executemany(
+                "INSERT INTO messages (thread_id, seq, payload) VALUES (?, ?, ?)",
+                [
+                    (thread_id, seq + index + 1,
+                     json.dumps(message.to_dict(), sort_keys=True, default=str))
+                    for index, message in enumerate(messages)
+                ],
+            )
+            self._conn.commit()
+
+    def read(self, thread_id: str) -> list[Message]:
+        with self._lock:
+            rows = self._conn.execute(
+                "SELECT payload FROM messages WHERE thread_id = ? ORDER BY seq",
+                (thread_id,),
+            ).fetchall()
+        out: list[Message] = []
+        for (payload,) in rows:
+            try:
+                out.append(Message.from_dict(json.loads(payload)))
+            except (json.JSONDecodeError, KeyError, TypeError):
+                continue
+        return out
+
+    def clear(self, thread_id: str) -> None:
+        with self._lock:
+            self._conn.execute("DELETE FROM messages WHERE thread_id = ?", (thread_id,))
+            self._conn.commit()
+
+    def threads(self) -> list[str]:
+        with self._lock:
+            rows = self._conn.execute(
+                "SELECT DISTINCT thread_id FROM messages ORDER BY thread_id"
+            ).fetchall()
+        return [row[0] for row in rows]
+
+    def close(self) -> None:
+        with self._lock:
+            self._conn.close()
+
+
 @dataclass
 class Memory:
     """Decide which remembered messages are fed back to the model."""
@@ -223,6 +302,7 @@ def estimate_tokens(text: str) -> int:
 
 
 __all__ = [
+    "SqliteMemoryStore",
     "MemoryStore",
     "InMemoryStore",
     "FileMemoryStore",

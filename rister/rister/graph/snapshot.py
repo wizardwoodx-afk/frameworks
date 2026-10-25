@@ -188,6 +188,104 @@ class FileSnapshotStore(SnapshotStore):
                 path.unlink()
 
 
+class SqliteSnapshotStore(SnapshotStore):
+    """Durable history in a SQLite file (standard library, WAL mode).
+
+    Unlike the file store, this survives a crash mid-write, is safe for several
+    processes and worker threads, and can be queried: a support engineer can
+    open the database with any SQLite client and read a run's history.
+
+    Schema: ``snapshots(thread_id, step, payload, created)`` with a primary key
+    on ``(thread_id, step)`` so a replayed step overwrites rather than duplicates.
+    """
+
+    SCHEMA = """
+        CREATE TABLE IF NOT EXISTS snapshots (
+            thread_id TEXT NOT NULL,
+            step      INTEGER NOT NULL,
+            payload   TEXT NOT NULL,
+            created   REAL NOT NULL,
+            PRIMARY KEY (thread_id, step)
+        )
+    """
+
+    def __init__(self, path: str | os.PathLike[str] = ":memory:") -> None:
+        import sqlite3
+
+        self.path = str(path)
+        self._sqlite = sqlite3
+        self._lock = threading.RLock()
+        if self.path != ":memory:":
+            Path(self.path).parent.mkdir(parents=True, exist_ok=True)
+        self._conn = sqlite3.connect(self.path, check_same_thread=False, timeout=10)
+        self._conn.execute("PRAGMA journal_mode=WAL")
+        self._conn.execute("PRAGMA synchronous=NORMAL")
+        self._conn.execute(self.SCHEMA)
+        self._conn.commit()
+
+    # -- api ---------------------------------------------------------------
+    def save(self, snapshot: Snapshot) -> None:
+        payload = json.dumps(snapshot.to_dict(), sort_keys=True, default=str)
+        with self._lock:
+            self._conn.execute(
+                "INSERT INTO snapshots (thread_id, step, payload, created) "
+                "VALUES (?, ?, ?, ?) "
+                "ON CONFLICT(thread_id, step) DO UPDATE SET payload=excluded.payload",
+                (snapshot.thread_id, snapshot.step, payload, snapshot.created),
+            )
+            self._conn.commit()
+
+    def history(self, thread_id: str) -> list[Snapshot]:
+        with self._lock:
+            rows = self._conn.execute(
+                "SELECT payload FROM snapshots WHERE thread_id = ? ORDER BY step",
+                (thread_id,),
+            ).fetchall()
+        out: list[Snapshot] = []
+        for (payload,) in rows:
+            try:
+                out.append(Snapshot.from_dict(json.loads(payload)))
+            except (json.JSONDecodeError, KeyError, TypeError):
+                continue
+        return out
+
+    def load(self, thread_id: str) -> Snapshot | None:
+        with self._lock:
+            row = self._conn.execute(
+                "SELECT payload FROM snapshots WHERE thread_id = ? "
+                "ORDER BY step DESC LIMIT 1",
+                (thread_id,),
+            ).fetchone()
+        if not row:
+            return None
+        try:
+            return Snapshot.from_dict(json.loads(row[0]))
+        except (json.JSONDecodeError, KeyError, TypeError):
+            return None
+
+    def threads(self) -> list[str]:
+        with self._lock:
+            rows = self._conn.execute(
+                "SELECT DISTINCT thread_id FROM snapshots ORDER BY thread_id"
+            ).fetchall()
+        return [row[0] for row in rows]
+
+    def clear(self, thread_id: str) -> None:
+        with self._lock:
+            self._conn.execute("DELETE FROM snapshots WHERE thread_id = ?", (thread_id,))
+            self._conn.commit()
+
+    def close(self) -> None:
+        with self._lock:
+            self._conn.close()
+
+    def __enter__(self) -> "SqliteSnapshotStore":
+        return self
+
+    def __exit__(self, *exc_info: Any) -> None:
+        self.close()
+
+
 __all__ = [
     "STATUS_RUNNING",
     "STATUS_OK",
@@ -196,4 +294,5 @@ __all__ = [
     "SnapshotStore",
     "MemorySnapshotStore",
     "FileSnapshotStore",
+    "SqliteSnapshotStore",
 ]

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "rister"
-version = "1.0.0"
+version = "1.1.0"
 description = "RISTER — a unified, native toolkit for governed AI agents: graphs, agents, memory, policy, scanning, tracing and evals in one dependency-free runtime."
 readme = "README.md"
 requires-python = ">=3.10"

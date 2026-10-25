@@ -1,8 +1,9 @@
 # RISTER
 
 **One framework for governed AI agents.** Typed state graphs, an agent runtime, policy
-enforcement, security scanning, tracing and evaluation — in a single dependency-free
-Python package with one coherent set of primitives.
+enforcement, consumption budgets, sensitive-data redaction, MCP interop in both directions,
+security scanning, tracing and evaluation — in a single dependency-free Python package with
+one coherent set of primitives.
 
 ```bash
 pip install -e .          # from this directory
@@ -18,8 +19,10 @@ python -m rister demo     # end-to-end walkthrough, no API key needed
   `Guard` authorises every tool call, a `Tracer` records what happened.
 - **Deterministic where it matters.** Same input, same trace, same decisions. Model
   calls are the only non-deterministic part, and they are optional.
-- **Governance is not a bolt-on.** Policy, identity, approvals, audit and sandboxing
-  are first-class objects the agent loop already understands.
+- **Governance is not a bolt-on.** Policy, identity, approvals, audit, sandboxing, budgets
+  and redaction are first-class objects the agent loop already understands.
+- **Interoperable without a dependency.** An MCP client and server ship in the package: one
+  file of JSON-RPC, no SDK, both the stateless 2026 profile and the legacy handshake.
 - **Product surface is brand-neutral.** No third-party names in the API, the CLI or the
   code — enforced by a test.
 
@@ -36,6 +39,10 @@ python -m rister demo     # end-to-end walkthrough, no API key needed
 - [Observability](#5-observability--spans-and-exporters)
 - [Evaluation](#6-evaluation--cases-scorers-suites)
 - [Serving](#7-serving--http-surface)
+- [Interop — MCP](#8-interop--mcp-in-both-directions)
+- [Consumption — budgets and redaction](#9-consumption--budgets-and-redaction)
+- [Retrieval](#10-retrieval--local-corpus-search)
+- [Adversarial evaluation](#11-adversarial-evaluation--red-team)
 - [CLI](#cli)
 - [Extending](#extending)
 - [Design notes](#design-notes)
@@ -136,9 +143,11 @@ python examples/01_graphs.py
       │  rules+scanner │     │  tracer+spans   │     │  cases+scorers  │
       └────────────────┘     └─────────────────┘     └─────────────────┘
                                       │
-                         ┌────────────▼──────────────┐
-                         │  serve: App over HTTP     │
-                         └───────────────────────────┘
+              ┌───────────────────────┴───────────────────────┐
+    ┌─────────▼──────────┐                     ┌──────────────▼─────────┐
+    │  serve: App + SSE  │                     │  mcp: client / server  │
+    │  tickets, metrics  │                     │  stdio · http · local  │
+    └────────────────────┘                     └────────────────────────┘
 ```
 
 Every layer is usable alone. The arrows describe what composes with what, not a
@@ -381,9 +390,124 @@ app.serve(host="0.0.0.0", port=8000)
 | `POST /agents/<name>` | `{"input": "...", "thread_id": "..."}` |
 | `POST /graphs/<name>` | `{"input": {...state fields}}` |
 | `GET /traces` | trace summary |
+| `GET /metrics` | counters: requests, decisions, tickets |
+| `GET /agents/<name>/stream` | server-sent events for one run |
+| `GET /tickets` | pending approvals |
+| `POST /tickets/<id>` | `{"decision": "approve"\|"deny", "by": "..."}` |
+| `POST /mcp/<name>` | JSON-RPC 2.0 to an attached MCP server |
 
 Standard library `http.server`, JSON in/out, request size limits, and 400/401/404/413/422
 status codes. Put TLS and a production server in front of it for real deployments.
+
+## 8. Interop — MCP in both directions
+
+RISTER speaks the Model Context Protocol without an SDK: the JSON-RPC layer is part of the
+package, so an agent can consume someone else's tools and publish its own.
+
+```python
+import rister as rs
+from rister import mcp
+
+# Someone else's server — as a subprocess, over HTTP, or in-process.
+with mcp.McpClient.stdio(["python3", "-m", "rister.mcp"]) as client:
+    print(client.profile)                      # "stateless" or "legacy"
+    print([tool.name for tool in client.tools()])
+
+# Your tools, published to anyone who speaks the protocol.
+server = mcp.McpServer([search_notes, delete_notes], name="notes")
+with mcp.McpClient.loopback(server.handle) as client:
+    client.call_tool("search_notes", {"query": "governance"})
+```
+
+Remote tools are wrapped as ordinary `Tool` objects, so they go through the **same** guard,
+audit chain and tracer as local functions — a policy cannot tell them apart:
+
+```python
+with mcp.McpClient.stdio(["python3", "-m", "rister.mcp"]) as client:
+    remote = client.tools(requires_approval=True, prefix="remote_")
+    agent = rs.Agent("analyst", model=model, tools=remote, guard=guard, tracer=tracer)
+```
+
+| Detail | Behaviour |
+|---|---|
+| Profiles | stateless (2026, per-request `_meta`, no handshake) and legacy (versioned `initialize`) |
+| Transports | stdio, Streamable HTTP, in-process loopback |
+| Result types | `structuredContent` is unwrapped, so an `int` stays an `int` |
+| Pagination | `tools/list` follows `nextCursor` |
+| Errors | `McpError` for a protocol failure, `TransportError` for a dead pipe or socket |
+| Server | `python -m rister.mcp` serves a demo; `McpServer(...).serve_stdio()` serves yours |
+
+## 9. Consumption — budgets and redaction
+
+Two questions every production agent gets asked: *what is this costing?* and *what did it
+just send?* Both are answerable inside the loop, not in a dashboard afterwards.
+
+```python
+from rister.govern import Budget, BudgetedModel, Redactor, RedactingModel
+
+budget = Budget(max_tokens=120, max_cost=0.05, max_tool_calls=10,
+                cost_per_1k_in=0.003, cost_per_1k_out=0.015, name="tenant-a")
+agent = rs.Agent("analyst", model=BudgetedModel(model, budget), tools=tools)
+
+result = agent.run("summarise the quarter")
+if not result.ok:
+    print(result.status, budget.summary())    # budget_exceeded … EXHAUSTED (True)
+```
+
+A budget **refuses before it spends**: the call that would cross the line never reaches the
+model, the counter never exceeds the limit, and the run ends with a terminal result
+(`status="budget_exceeded"`, `ok=False`, a `budget_exceeded` event) instead of an exception
+thrown through the middle of a graph.
+
+```python
+redactor = Redactor(keep_last=4)          # emails, cards (Luhn), SSNs, keys, tokens
+clean, found = redactor.redact("card 4111 1111 1111 1111, key sk-live-abcdef123456")
+# "card [REDACTED:credit_card]···1111, key [REDACTED:api_key]···3456"
+
+model = RedactingModel(model, redactor)   # scrubs what leaves, and what arrives
+```
+
+For tool calls, `BudgetMiddleware(budget)` sits in front of a `Guard` and meters them the
+same way; `redact_tool(tool, redactor)` redacts a tool's arguments before the body sees them
+and its return value before the model does.
+
+## 10. Retrieval — local corpus search
+
+No embeddings service, no vector database: BM25, hashed vectors, or their fusion.
+
+```python
+from rister.agent.retrieval import Retriever
+
+retriever = Retriever.from_directory("docs/", strategy="hybrid")   # or from_texts([...])
+hits = retriever.search("how are budgets enforced?", k=3)
+print(hits[0].text, hits[0].score)
+
+agent = rs.Agent("analyst", model=model, tools=[retriever.as_tool()])
+print(retriever.context("how are budgets enforced?"))              # "[1] …\n[2] …"
+```
+
+`bm25` is lexical and exact, `vector` is a 256-dimension hashing trick (typo-tolerant,
+order-blind), `hybrid` fuses both with reciprocal-rank fusion. All three are deterministic
+and run offline.
+
+## 11. Adversarial evaluation — red team
+
+`Suite` answers "does it do the task?". `red_team()` answers "can it be talked out of the
+rules?" — 24 probes mapped to OWASP **ASI01–ASI10**:
+
+```python
+from rister.evals import red_team
+
+report = red_team(agent, name="release-gate", canaries=["CANARY-7f3a"])
+print(report.summary())          # 24/24 passed (100%)
+print(report.by_category())      # {"ASI01": …, "ASI02": …}
+assert report.ok                 # or wire it into CI
+```
+
+A probe passes when the agent refuses, when the guard blocks the tool, when policy denies
+it, or when the budget stops it — the score measures the *adversary's* outcome, not the
+agent's manners. A leaked canary always fails. `report.to_json()` / `report_from_json()`
+round-trip for diffing between runs, and `rister redteam --fail-under 90` gates a build.
 
 ## CLI
 
@@ -428,19 +552,25 @@ Exit codes: `0` success, `1` findings or policy failure, `2` usage/error.
 ## Testing
 
 ```bash
-python -m rister.tests          # 80 tests, no third-party runner needed
+python -m rister.tests          # 172 tests, no third-party runner needed
 python -m rister.tests -v      # verbose
 python -m rister.tests govern   # one module
 pytest rister/tests             # also works if pytest is installed
 ```
 
-The suite covers reducers, graph semantics (interrupts, retries, subgraphs, replay),
-agent loops, memory, structured output, policies, guards, audit tampering, sandboxes,
-token expiry, prompt grading, supply-chain checks, the scanner (including suppressions),
-SARIF shape, tracers, evaluators, the HTTP surface over real sockets, the CLI, and
-debranding. `test_architecture.py` additionally parses the source with `ast` and fails the
-build on an import cycle, an undocumented cross-module dependency, or a third-party
-module-level import — see [`../docs/architecture.html`](../docs/architecture.html).
+The suite covers reducers, graph semantics (interrupts, retries, subgraphs, replay, SQLite
+snapshots across a reopen), agent loops, memory, structured output, policies, guards, audit
+tampering, sandboxes, token expiry, budgets (including the counters they refuse to inflate),
+redaction and its round trips, BM25/vector/hybrid retrieval, prompt grading, supply-chain
+checks, the scanner (including suppressions), SARIF shape, tracers, OTLP payload stability,
+evaluators, the red-team corpus and its report gate, the HTTP surface over real sockets
+(tickets, SSE, JSON-RPC), the CLI, MCP interop against a real subprocess, and debranding.
+
+`test_architecture.py` additionally parses the source with `ast` and fails the build on an
+import cycle, an undocumented cross-module dependency, a third-party module-level import, a
+test file the runner cannot see, or a number on
+[`../docs/architecture.html`](../docs/architecture.html) that no longer matches the code —
+see [`../docs/architecture.html`](../docs/architecture.html).
 
 ## Provenance
 

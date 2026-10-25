@@ -124,6 +124,21 @@ class ServeError(RisterError):
     """The HTTP surface failed to start or handle a request."""
 
 
+# -- consumption -----------------------------------------------------------
+class BudgetExceeded(RisterError):
+    """A token, cost, time or call budget was exhausted."""
+
+    def __init__(self, limit: str, used: float, allowed: float, unit: str = "") -> None:
+        self.limit = limit
+        self.used = used
+        self.allowed = allowed
+        self.unit = unit
+        suffix = f" {unit}" if unit else ""
+        super().__init__(
+            f"{limit} budget exhausted: used {used:g}{suffix} of {allowed:g}{suffix}"
+        )
+
+
 __all__ = [
     "RisterError",
     "StateError",
@@ -142,4 +157,5 @@ __all__ = [
     "ScanError",
     "EvalError",
     "ServeError",
+    "BudgetExceeded",
 ]

@@ -5,8 +5,9 @@ that were scattered across six separate projects are reimplemented behind one co
 API, with a single set of types, one error hierarchy and one vocabulary.
 
 - **Package:** [`rister/`](../rister/) — Python 3.10+, zero runtime dependencies
-- **Version:** 1.0.0
-- **Tests:** 80 (including a suite that enforces brand-neutrality)
+- **Version:** 1.1.0
+- **Tests:** 172 (including suites that enforce brand-neutrality and keep this
+  page's numbers honest)
 - **Try it:** `cd rister && python -m rister demo`
 - **Architecture:** [`architecture.html`](architecture.html) — an interactive map of the
   module graph, the import law and the runtime call path
@@ -70,13 +71,16 @@ best design won; where they did not, the capability was absorbed as a new subsys
 ```
 orchestration   State · reducers · Graph · supersteps · snapshots · interrupts
      │
-agents          Agent · Model backends · Tools · Memory · structured output
+agents          Agent · Model backends · Tools · Memory · retrieval · structured output
      │
 governance      Policy · Guard · Identity · Approval · Audit · Sandbox · Prompt/Deps audit
+     │          + consumption budgets · redaction (the same choke point, more questions)
      │
-analysis        Security scanner · SARIF · Evals · Scorers
+interop         MCP client (stdio · Streamable HTTP · loopback) · MCP server
      │
-plumbing        Tracer/Exporters · serving App · CLI · demo
+analysis        Security scanner · SARIF · Evals · Scorers · adversarial red team
+     │
+plumbing        Tracer/Exporters (+ OTLP) · serving App · CLI · demo
 ```
 
 Imports flow downward only. `core` (errors, messages, tool calls, config) has no
@@ -86,15 +90,16 @@ dependencies at all, which is why every other module can import it without cycle
 
 | Module | Contents |
 |---|---|
-| `rister.core` | `Message`, `ToolCall`, `Usage`, `Completion`, `Config`, 17 exception types |
+| `rister.core` | `Message`, `ToolCall`, `Usage`, `Completion`, `Config`, 20 exception types, the version string |
 | `rister.state` | `State`, `Reducer`, `Last/Append/Unique/Merge/Sum/Max/Min` |
-| `rister.graph` | `Graph`, `CompiledGraph`, `NodeContext`, `Command`, snapshots, engine |
-| `rister.agent` | `Agent`, `Model` family, `Tool`/`ToolRegistry`, memory, prompts |
-| `rister.govern` | `Policy`, `Guard`, `Identity`/`Signer`, approvals, `AuditLog`, `Sandbox`, `PromptDefense`, `SupplyChainGuard` |
+| `rister.graph` | `Graph`, `CompiledGraph`, `NodeContext`, `Command`, memory/file/SQLite snapshot stores, engine |
+| `rister.agent` | `Agent`, `Model` family, `Tool`/`ToolRegistry`, memory, `Retriever`, prompts |
+| `rister.govern` | `Policy`, `Guard`, `Identity`/`Signer`, approvals, `AuditLog`, `Sandbox`, `PromptDefense`, `SupplyChainGuard`, `Budget`, `Redactor` |
 | `rister.security` | `Scanner`, `Rule`s, `ScanReport`, SARIF, `SECURITY.md` drafting |
-| `rister.observe` | `Tracer`, `Span`, exporters |
-| `rister.evals` | `Case`, `Scorer`s, `Suite`, `Report` |
-| `rister.serve` | `App` over `http.server` |
+| `rister.observe` | `Tracer`, `Span`, exporters, `OtlpExporter` |
+| `rister.evals` | `Case`, `Scorer`s, `Suite`, `Report`, `red_team` over ASI01–ASI10 |
+| `rister.mcp` | `McpClient`, `McpServer`, `McpToolSet` — both directions of the protocol |
+| `rister.serve` | `App` over `http.server` — agents, graphs, tickets, SSE, metrics, JSON-RPC |
 | `rister.demo` | the offline walkthrough |
 
 ---
@@ -170,7 +175,7 @@ These three commands are wired into this repository's CI.
   surface (use `import rister.graph` etc. for a leaner import).
 - **Graph overhead:** a superstep is a dict merge per frontier node; a 3-node pipeline
   runs in tens of microseconds, excluding node bodies and model calls.
-- **Scanner:** a 38-file package scans in ~60 ms; files above `max_file_bytes` are skipped
+- **Scanner:** a 59-file package scans in ~235 ms; files above `max_file_bytes` are skipped
   and counted, never silently ignored.
 - **Memory:** snapshots are plain dicts; the file store is append-only JSON lines.
 
@@ -184,3 +189,24 @@ These three commands are wired into this repository's CI.
 - Sandboxing is in-process path and capability control, not OS-level isolation. Use
   containers when you need kernel isolation.
 - The `FileSnapshotStore`/`FileMemoryStore` assume single-writer semantics per thread.
+
+## 7. What version 1.1 added, and why each piece earns its place
+
+Version 1.0 proved the governance thesis — one choke point, deterministic decisions, a
+tamper-evident log. Version 1.1 closes the gaps that made it hard to run that thesis in
+production. Nothing was added that a test does not exercise.
+
+| Addition | The gap it closes | What makes it real |
+|---|---|---|
+| **MCP client and server** (`rister.mcp`, 890 lines) | tools lived in one process; the rest of the ecosystem speaks MCP | both profiles (stateless 2026 and the legacy handshake), three transports, `structuredContent` so an `int` survives the wire, and remote tools that pass through the same `Guard` |
+| **Consumption budgets** (`govern/budget.py`) | "governed" said nothing about cost or runaway loops | refuses *before* spending, so the counter never exceeds the limit; exhaustion ends the run as a terminal `budget_exceeded` result instead of an exception escaping the loop |
+| **Redaction** (`govern/redact.py`) | secrets left the process in prompts and came back in tool output | five detectors (Luhn-checked cards), both directions, `keep_last` that actually keeps something |
+| **Retrieval** (`agent/retrieval.py`) | agents had memory but no way to read a corpus | BM25, hashed vectors and reciprocal-rank fusion, all offline and deterministic; `as_tool()` makes it a governed tool |
+| **Red team** (`evals/redteam.py`) | an eval suite said "it works", never "it can be broken" | 24 probes across OWASP ASI01–ASI10; refusals, guard blocks, policy denials and budget stops all count as passes, so the score measures the adversary |
+| **OTLP export** (`observe/otlp.py`) | traces could not leave the process | one wall-clock anchor per trace, so a retry re-exports a byte-identical payload |
+| **SQLite stores** (`graph/snapshot.py`, `agent/memory.py`) | durability was a file convention | interrupt in one process, resume from the same file in another; writes are idempotent per `(thread, step)` |
+| **Human endpoint** (`serve.py`) | approvals were in-process only | `GET /tickets` and `POST /tickets/<id>` let a person answer a parked run over HTTP |
+
+The architectural law did not bend to make room: `mcp → agent` is the third documented
+cross-link, `core` still imports nothing, and `test_architecture.py` fails the build on a
+cycle, an undocumented edge, or a third-party import.

@@ -175,9 +175,9 @@
     <div class="brand">RISTER<span class="dot">.</span>architecture</div>
     <div class="chips">
       <div class="chip"><b>0</b> runtime deps</div>
-      <div class="chip"><b>7,980</b> LOC</div>
-      <div class="chip"><b>96</b> exports</div>
-      <div class="chip"><b>80</b> tests</div>
+      <div class="chip"><b>11,829</b> LOC</div>
+      <div class="chip"><b>114</b> exports</div>
+      <div class="chip"><b>172</b> tests</div>
       <div class="chip">python <b>3.10+</b></div>
     </div>
   </div>
@@ -187,19 +187,19 @@
 
   <!-- ================= HERO ================= -->
   <div class="hero">
-    <div class="eyebrow">system design · v1.0.0</div>
+    <div class="eyebrow">system design · v1.1.0</div>
     <h1>A dependency hub, <em>not a tower of layers.</em></h1>
     <p class="lede">Every subsystem depends on <code class="mono">core</code> and on nothing
-      else — with exactly two deliberate cross-links. That flatness is the point: any part of
+      else — with exactly three deliberate cross-links. That flatness is the point: any part of
       RISTER can be imported and used alone, and the composition you see at runtime is built
       from objects, not from import order.</p>
 
     <div class="stats">
       <div class="stat"><div class="n">13</div><div class="k">modules</div></div>
-      <div class="stat"><div class="n">46</div><div class="k">files</div></div>
-      <div class="stat"><div class="n">7,980</div><div class="k">significant LOC</div></div>
-      <div class="stat"><div class="n">111</div><div class="k">public classes</div></div>
-      <div class="stat"><div class="n">17</div><div class="k">exception types</div></div>
+      <div class="stat"><div class="n">59</div><div class="k">files</div></div>
+      <div class="stat"><div class="n">11,829</div><div class="k">significant LOC</div></div>
+      <div class="stat"><div class="n">140</div><div class="k">public classes</div></div>
+      <div class="stat"><div class="n">20</div><div class="k">exception types</div></div>
       <div class="stat"><div class="n">0</div><div class="k">third-party imports</div></div>
     </div>
   </div>
@@ -214,7 +214,7 @@
 
     <div class="split">
       <div class="graph-wrap">
-        <svg viewBox="0 0 1000 560" role="img" aria-label="RISTER module dependency graph">
+        <svg viewBox="0 0 1000 650" role="img" aria-label="RISTER module dependency graph">
           <defs>
             <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7"
                     markerHeight="7" orient="auto-start-reverse">
@@ -235,7 +235,7 @@
           <line class="edge" x1="755" y1="390" x2="575" y2="304" marker-end="url(#arrow)"/>
           <line class="edge" x1="500" y1="116" x2="500" y2="250" marker-end="url(#arrow)"/>
           <line class="edge" x1="500" y1="440" x2="500" y2="306" marker-end="url(#arrow)"/>
-          <!-- the two deliberate cross-links -->
+          <!-- the deliberate cross-links -->
           <line class="edge hot" x1="230" y1="250" x2="230" y2="166" marker-end="url(#arrowHot)"/>
           <text class="nrole" x="245" y="214" fill="#35c6a4">imports state</text>
           <text class="nrole" x="596" y="86" fill="#35c6a4">imports agent</text>
@@ -247,23 +247,23 @@
 
           <rect class="nbox" x="170" y="250" width="150" height="56" rx="9"/>
           <text class="nlabel" x="190" y="274">graph</text>
-          <text class="nloc" x="190" y="292">849 loc · engine</text>
+          <text class="nloc" x="190" y="292">933 loc · engine</text>
 
           <rect class="nbox" x="170" y="390" width="150" height="56" rx="9"/>
           <text class="nlabel" x="190" y="414">agent</text>
-          <text class="nloc" x="190" y="432">1,262 loc · runtime</text>
+          <text class="nloc" x="190" y="432">1,743 loc · runtime</text>
 
           <rect class="nbox core" x="425" y="250" width="150" height="56" rx="9"/>
           <text class="nlabel" x="447" y="274" fill="#f0b429">core</text>
-          <text class="nloc" x="447" y="292">397 loc · 0 imports</text>
+          <text class="nloc" x="447" y="292">411 loc · 0 imports</text>
 
           <rect class="nbox" x="680" y="110" width="150" height="56" rx="9"/>
           <text class="nlabel" x="700" y="134">govern</text>
-          <text class="nloc" x="700" y="152">1,867 loc · policy</text>
+          <text class="nloc" x="700" y="152">2,415 loc · policy</text>
 
           <rect class="nbox" x="680" y="250" width="150" height="56" rx="9"/>
           <text class="nlabel" x="700" y="274">observe</text>
-          <text class="nloc" x="700" y="292">233 loc · tracing</text>
+          <text class="nloc" x="700" y="292">442 loc · tracing</text>
 
           <rect class="nbox" x="680" y="390" width="150" height="56" rx="9"/>
           <text class="nlabel" x="700" y="414">security</text>
@@ -271,23 +271,34 @@
 
           <rect class="nbox" x="425" y="60" width="150" height="56" rx="9"/>
           <text class="nlabel" x="447" y="84">evals</text>
-          <text class="nloc" x="447" y="102">421 loc · scorers</text>
+          <text class="nloc" x="447" y="102">829 loc · scorers</text>
 
           <rect class="nbox" x="425" y="440" width="150" height="56" rx="9"/>
           <text class="nlabel" x="447" y="464">serve</text>
-          <text class="nloc" x="447" y="482">166 loc · http</text>
+          <text class="nloc" x="447" y="482">301 loc · http</text>
+
+          <rect class="nbox" x="600" y="540" width="150" height="56" rx="9"/>
+          <text class="nlabel" x="622" y="564">mcp</text>
+          <text class="nloc" x="622" y="582">887 loc · protocol</text>
+
+          <!-- mcp speaks core, and wraps agent tools -->
+          <line class="edge" x1="600" y1="556" x2="578" y2="306" marker-end="url(#arrow)"/>
+          <line class="edge hot" x1="600" y1="590" x2="320" y2="446" marker-end="url(#arrowHot)"/>
+          <text class="nrole" x="606" y="530" fill="#35c6a4">imports agent</text>
 
           <!-- legends -->
           <text class="nrole" x="30" y="76">EVERY BOX BELOW IMPORTS</text>
           <text class="nrole" x="30" y="92">core AND NOTHING ELSE</text>
-          <text class="nrole" x="30" y="500">— — two deliberate cross-links</text>
-          <text class="nrole" x="30" y="516">graph → state · evals → agent</text>
+          <text class="nrole" x="30" y="500">— — three deliberate cross-links</text>
+          <text class="nrole" x="30" y="516">graph → state · evals → agent · mcp → agent</text>
         </svg>
         <div class="caption">
           Arrows point at the dependency. <b style="color:#35c6a4">Teal</b> dashed lines are the
           only non-core imports in the whole package: <code class="mono">graph</code> reuses the
-          reducer algebra from <code class="mono">state</code>, and
-          <code class="mono">evals</code> accepts an agent as an evaluation target.
+          reducer algebra from <code class="mono">state</code>,
+          <code class="mono">evals</code> accepts an agent as an evaluation target, and
+          <code class="mono">mcp</code> hands remote tools back as ordinary
+          <code class="mono">Tool</code> objects.
         </div>
       </div>
 
@@ -300,7 +311,7 @@
           </table>
           <div class="legend">
             <div><b>core imports nothing.</b> It holds <code class="mono">Message</code>,
-              <code class="mono">ToolCall</code>, <code class="mono">Config</code> and all 17
+              <code class="mono">ToolCall</code>, <code class="mono">Config</code> and all 20
               exception types, so every other module can depend on it without a cycle.</div>
             <div><b>No cycles, by construction.</b> <code class="mono">test_architecture.py</code>
               parses every file with <code class="mono">ast</code>, walks the import graph and
@@ -535,20 +546,66 @@
     </div>
     <div class="cards" style="margin-top:16px">
       <div class="card"><div class="k">asymmetry</div><h4>govern is the largest module</h4>
-        <p>1,867 lines — 22% of the framework, and more than <code>graph</code> and
-          <code>state</code> combined. Governance is the product; orchestration is the easy
+        <p>2,415 lines — 25% of the framework, and more than <code>agent</code>,
+          <code>graph</code> and <code>state</code> apart. Governance is the product; orchestration is the easy
           part.</p></div>
-      <div class="card"><div class="k">discipline</div><h4>core is 397 lines and imports nothing</h4>
+      <div class="card"><div class="k">discipline</div><h4>core is 421 lines and imports nothing</h4>
         <p>A small, dependency-free core is what keeps nine subsystems from turning into a
           tangle of cross-imports.</p></div>
-      <div class="card"><div class="k">verification</div><h4>1,251 lines of tests</h4>
-        <p>80 tests across 8 files, runnable with no third-party runner. Two of those files
-          test the architecture itself: the dependency law and brand-neutrality.</p></div>
+      <div class="card"><div class="k">verification</div><h4>2,112 lines of tests</h4>
+        <p>172 tests across 8 files, runnable with no third-party runner. Some of those files
+          test the architecture itself: the dependency law, brand-neutrality, and the counts on
+          this page.</p></div>
+    </div>
+  </section>
+
+
+  <!-- ================= 06 CAPABILITIES ================= -->
+  <section id="capabilities">
+    <div class="sec-head">
+      <span class="sec-num">06</span>
+      <h2>What is new in 1.1</h2>
+      <span class="sec-sub">measured, not aspirational</span>
+    </div>
+
+    <div class="cards">
+      <div class="card"><div class="k">consumption</div><h4>A budget refuses before it spends</h4>
+        <p><code>Budget(max_tokens=120)</code> wrapping a metered model stops the run on the
+          call that would cross the line: two calls, 180 tokens, then
+          <code>status="budget_exceeded"</code> — a terminal result, not an exception thrown
+          through the loop.</p></div>
+      <div class="card"><div class="k">privacy</div><h4>Redaction runs in both directions</h4>
+        <p><code>Redactor</code> detects emails, Luhn-valid card numbers, SSNs, API keys and
+          bearer tokens. <code>RedactingModel</code> scrubs what leaves; <code>keep_last=4</code>
+          leaves <code>···1111</code> so an operator can still match the row.</p></div>
+      <div class="card"><div class="k">retrieval</div><h4>Three rankings, one interface</h4>
+        <p>BM25, hashed embeddings, or their reciprocal-rank fusion — no model, no network.
+          <code>as_tool()</code> turns the corpus into a tool the agent may call, and every
+          <code>context()</code> passage is numbered for citation.</p></div>
+      <div class="card"><div class="k">interop</div><h4>MCP in both directions</h4>
+        <p>A client that speaks stdio, Streamable HTTP and in-process loopback, and a server
+          that exposes the same tools to anyone else. The stateless profile needs no handshake;
+          <code>structuredContent</code> keeps an <code>int</code> an <code>int</code>.</p></div>
+      <div class="card"><div class="k">adversarial</div><h4>24 probes, ten failure classes</h4>
+        <p><code>red_team()</code> grades an agent against OWASP ASI01–ASI10. A refusal, a
+          guard block or a policy denial all count as a pass — the score measures the
+          adversary's outcome, not the agent's manners.</p></div>
+      <div class="card"><div class="k">telemetry</div><h4>Traces that survive a retry</h4>
+        <p><code>OtlpExporter</code> pins one wall-clock anchor per trace, so re-exporting an
+          ended trace yields a byte-identical payload — safe to retry a flaky collector.</p></div>
+      <div class="card"><div class="k">durability</div><h4>Pause in one process, resume in another</h4>
+        <p><code>SqliteSnapshotStore</code> writes each <code>(thread, step)</code> once. A
+          graph interrupted on one machine is resumed from the same file by a fresh process —
+          <code>steps=['resumed with True']</code>, nothing recomputed.</p></div>
+      <div class="card"><div class="k">operations</div><h4>The human is an endpoint</h4>
+        <p>The HTTP surface grew tickets, SSE streaming, metrics and JSON-RPC:
+          <code>POST /tickets/&lt;id&gt;</code> answers a pending approval and the parked run
+          continues to <code>done</code>.</p></div>
     </div>
   </section>
 
   <footer>
-    <div>RISTER 1.0.0 · generated from the source tree · 46 files · 7,980 significant LOC</div>
+    <div>RISTER 1.1.0 · generated from the source tree · 59 files · 11,829 significant LOC</div>
     <div>zero runtime dependencies · stdlib only · python 3.10+</div>
   </footer>
 </div>
@@ -556,7 +613,7 @@
 <script>
 const DATA = {
   modules: [
-    {id:"core", loc:397, files:"3 files", colour:"#f0b429",
+    {id:"core", loc:421, files:"4 files", colour:"#f0b429",
      desc:"The dependency-free floor: message and tool-call types, per-run configuration, and one exception hierarchy that every other module raises.",
      classes:[["Message","A single conversational turn."],
               ["ToolCall","A request to run a named tool with JSON arguments."],
@@ -577,7 +634,7 @@ const DATA = {
               ["Sum","Add numbers — counters and token totals."],
               ["Max / Min","Keep the extreme value."]],
      pub:["State","Reducer","Last","Append","Unique","Merge","Sum","Max","Min"]},
-    {id:"graph", loc:849, files:"5 files", colour:"#7fb4ff",
+    {id:"graph", loc:933, files:"5 files", colour:"#7fb4ff",
      desc:"The engine: nodes, static and conditional edges, supersteps, retries, interrupts, snapshots, replay, sub-graphs.",
      classes:[["Graph","Declare a stateful computation as nodes and edges."],
               ["CompiledGraph","invoke, stream, resume, replay, history."],
@@ -586,9 +643,10 @@ const DATA = {
               ["Snapshot","A point-in-time view of one thread."],
               ["SnapshotStore","The persistence interface."],
               ["MemorySnapshotStore","In-process, keeps full history."],
-              ["FileSnapshotStore","Append-only JSONL per thread."]],
+              ["FileSnapshotStore","Append-only JSONL per thread."],
+              ["SqliteSnapshotStore","Durable threads in one file; pause there, resume anywhere."]],
      pub:["Graph","CompiledGraph","Command","goto","START","END","Snapshot","NodeContext"]},
-    {id:"agent", loc:1262, files:"6 files", colour:"#a78bfa",
+    {id:"agent", loc:1743, files:"7 files", colour:"#a78bfa",
      desc:"The agent loop and everything it needs: model backends, typed tools, memory stores, prompt templates.",
      classes:[["Agent","A model, instructions, tools and memory wired into a loop."],
               ["Model","Base class for a chat backend — implement complete()."],
@@ -597,9 +655,10 @@ const DATA = {
               ["RouterModel","Pick a backend per request."],
               ["Tool / ToolRegistry","Typed callables and the single execution choke point."],
               ["Memory / MemoryStore","What to remember vs. what to show the model."],
+              ["Retriever","BM25, hashed embeddings, or a fused ranking over local text."],
               ["Prompt","A {placeholder} template with named defaults."]],
      pub:["Agent","ScriptedModel","HTTPModel","RouterModel","tool","Memory","Prompt","Tool"]},
-    {id:"govern", loc:1867, files:"9 files", colour:"#f0b429",
+    {id:"govern", loc:2415, files:"11 files", colour:"#f0b429",
      desc:"Deterministic enforcement: policy, the guard, signed identity, approvals, the audit chain, capability rings, prompt and dependency audits.",
      classes:[["Policy / Rule","Ordered rules, glob actions, argument predicates."],
               ["Guard","Authorise, approve, audit, or refuse — one check()."],
@@ -607,16 +666,19 @@ const DATA = {
               ["QueueApprover","Ticket, then block for an explicit decision."],
               ["AuditLog","Append-only hash chain; verify() detects any edit."],
               ["Sandbox / Ring","Rooted filesystem jail; ROOT→UNTRUSTED tiers."],
+              ["Budget / BudgetedModel","Cap tokens, cost, time and tool calls; refuse before spending."],
+              ["Redactor / RedactingModel","Find and mask secrets in both directions."],
               ["PromptDefense","Score a system prompt against 12 vectors."],
               ["SupplyChainGuard","Unpinned, range and typosquat detection."]],
      pub:["Policy","PolicySet","Guard","AuditLog","Identity","Signer","Sandbox","Ring","AutoApprover","QueueApprover"]},
-    {id:"observe", loc:233, files:"3 files", colour:"#35c6a4",
+    {id:"observe", loc:443, files:"4 files", colour:"#35c6a4",
      desc:"Spans that nest, and exporters that are just functions. Tracing is local unless you hand it somewhere.",
      classes:[["Tracer","Collects spans; hands finished traces to exporters."],
               ["Span","One timed unit of work, with parent_id and attributes."],
               ["JSONLExporter","One JSON object per trace."],
               ["ConsoleExporter","A compact tree of finished traces."],
-              ["CallableExporter","Hand the payload to any function."]],
+              ["CallableExporter","Hand the payload to any function."],
+              ["OtlpExporter","OTLP/HTTP JSON with stable ids, so a retry is byte-identical."]],
      pub:["Tracer","Span","JSONLExporter","ConsoleExporter"]},
     {id:"security", loc:824, files:"4 files", colour:"#ea5b56",
      desc:"A deterministic scanner: 18 rules, inline suppressions that are recorded rather than hidden, SARIF/JSON/MD/CSV output.",
@@ -626,7 +688,7 @@ const DATA = {
               ["Suppression","A finding an inline directive deliberately silenced."],
               ["ScanReport","Findings, coverage, suppressions, SARIF export."]],
      pub:["Scanner","ScanReport","Finding","Suppression","scan","get_rules","draft_security_policy"]},
-    {id:"evals", loc:421, files:"3 files", colour:"#5aa2ff",
+    {id:"evals", loc:833, files:"4 files", colour:"#5aa2ff",
      desc:"Deterministic scorers first, model judges clearly labelled. Suites produce a diffable report.",
      classes:[["Suite","A named set of cases scored by one or more scorers."],
               ["Case","One input with its expectations."],
@@ -634,21 +696,31 @@ const DATA = {
               ["JsonKeys","JSON with the expected keys and types."],
               ["NumericClose","A number within tolerance."],
               ["ModelJudge","Subjective grading — not reproducible."],
+              ["red_team / Attack","24 adversarial probes across OWASP ASI01-ASI10."],
               ["Report","Pass rate, mean score, markdown and JSON."]],
      pub:["Suite","Case","Report","Exact","Contains","JsonKeys","NumericClose","evaluate"]},
-    {id:"serve", loc:166, files:"1 file", colour:"#7f92a8",
+    {id:"mcp", loc:890, files:"5 files", colour:"#35c6a4",
+     desc:"A client and a server for the Model Context Protocol, both directions: federation of external tools into the registry, and exposing RISTER's own tools to other agents.",
+     classes:[["McpClient","stdio, Streamable HTTP, or in-process loopback."],
+              ["McpServer","Expose Tool objects over JSON-RPC 2.0."],
+              ["McpToolSet","Remote tools that satisfy the local Tool interface."],
+              ["ServerProfile","Stateless 2026 profile vs. legacy handshake."],
+              ["McpError","A JSON-RPC level failure from the peer."],
+              ["TransportError","The pipe or the socket itself failed."]],
+     pub:["McpClient","McpServer","McpToolSet","McpError","TransportError"]},
+    {id:"serve", loc:302, files:"1 file", colour:"#7f92a8",
      desc:"A stdlib HTTP surface: JSON routes for agents and graphs, optional bearer auth, honest status codes.",
      classes:[["App","Routes agents and graphs over HTTP."],
               ["App.handle","Pure routing — testable without a socket."],
               ["App.make_server","Real server, standard library only."]],
      pub:["App","create_app"]},
-    {id:"demo", loc:186, files:"1 file", colour:"#7f92a8",
+    {id:"demo", loc:268, files:"1 file", colour:"#7f92a8",
      desc:"The offline walkthrough: pauses a graph, resumes it, refuses a tool, verifies the audit chain, scans its own source.",
      classes:[["run_demo","Eight sections, no API key, no network."]],
      pub:["run_demo"]}
   ],
   matrix: {
-    cols:["core","state","graph","agent","govern","observe","security","evals","serve"],
+    cols:["core","state","graph","agent","govern","observe","security","evals","mcp","serve"],
     rows:[["core",{}],
           ["state",{"core":1}],
           ["graph",{"core":1,"state":1}],
@@ -657,6 +729,7 @@ const DATA = {
           ["observe",{"core":1}],
           ["security",{"core":1}],
           ["evals",{"core":1,"agent":1}],
+          ["mcp",{"core":1,"agent":1}],
           ["serve",{"core":1}]]
   },
   trace: [

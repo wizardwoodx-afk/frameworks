@@ -1,6 +1,7 @@
 """Shared primitives: errors, messages, tool calls, usage and run configuration."""
 from __future__ import annotations
 
+from .meta import __version__
 from .errors import (
     ApprovalRequired,
     ConfigError,
@@ -16,6 +17,7 @@ from .errors import (
     SandboxError,
     ScanError,
     ServeError,
+    BudgetExceeded,
     StateError,
     Suspend,
     ToolError,
@@ -34,6 +36,7 @@ from .types import (
 )
 
 __all__ = [
+    "__version__",
     "RisterError",
     "StateError",
     "GraphError",
@@ -51,6 +54,7 @@ __all__ = [
     "ScanError",
     "EvalError",
     "ServeError",
+    "BudgetExceeded",
     "Role",
     "ToolCall",
     "Message",

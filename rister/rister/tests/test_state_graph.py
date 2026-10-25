@@ -228,12 +228,23 @@ def test_validation_errors():
     graph = Graph(Draft, "broken")
     graph.add_node("a", lambda s: {})
     graph.add_edge(START, "a")
-    graph.add_edge("a", "ghost")
+
+    # A typo is reported where it is written, not three frames later at compile().
     try:
-        graph.compile()
+        graph.add_edge("a", "ghost")
         raise AssertionError("expected GraphError")
     except GraphError as exc:
         assert "ghost" in str(exc)
+
+    # validate() still enforces the same invariant for edges that bypass add_edge.
+    graph.edges["a"] = ["ghost"]
+    try:
+        graph.validate()
+        raise AssertionError("expected GraphError")
+    except GraphError as exc:
+        assert "ghost" in str(exc)
+    finally:
+        graph.edges["a"] = []
 
 
 def test_dot_export():

@@ -19,6 +19,7 @@ from typing import Any, Callable, Iterable, Iterator, Mapping, Sequence
 
 from ..core.errors import (
     ApprovalRequired,
+    BudgetExceeded,
     ModelError,
     PolicyDenied,
     RisterError,
@@ -32,6 +33,7 @@ from .tool import Tool, ToolRegistry, parse_tool_arguments
 
 STATUS_OK = "ok"
 STATUS_MAX_TURNS = "max_turns"
+STATUS_BUDGET = "budget_exceeded"
 STATUS_INCOMPLETE = "incomplete"
 
 
@@ -281,6 +283,7 @@ class Agent:
                 self.memory.append(thread, user)
 
             usage = Usage()
+            budget_stop = False
             executed: list[dict[str, Any]] = []
             denied: list[dict[str, Any]] = []
             turns = 0
@@ -304,11 +307,18 @@ class Agent:
                 yield {"event": "turn_start", "turn": turns}
 
                 with self._span(f"model:{self.name}", turn=turns) as model_span:
-                    completion = self.model.complete(
-                        messages,
-                        tool_specs if not self.text_tools else None,
-                        tool_choice=self.tool_choice,
-                    )
+                    try:
+                        completion = self.model.complete(
+                            messages,
+                            tool_specs if not self.text_tools else None,
+                            tool_choice=self.tool_choice,
+                        )
+                    except BudgetExceeded as exc:
+                        # Consuming more is not an option, so end the run here.
+                        status = STATUS_BUDGET
+                        text = text or f"[budget exhausted: {exc}]"
+                        yield {"event": "budget_exceeded", "stage": "model", "detail": str(exc)}
+                        break
                     if model_span is not None and hasattr(model_span, "set"):
                         model_span.set("tokens", completion.usage.total_tokens)
 
@@ -341,8 +351,16 @@ class Agent:
                         with self._span(
                             f"tool:{call.name}", tool=call.name, turn=turns
                         ) as tool_span:
-                            # rister:ignore SEC017 -- the registry authorises before the body runs
-                            payload, ok, note = self._execute_tool(call, cfg)
+                            try:
+                                # rister:ignore SEC017 -- the registry authorises before the body runs
+                                payload, ok, note = self._execute_tool(call, cfg)
+                            except BudgetExceeded as exc:
+                                status = STATUS_BUDGET
+                                text = text or f"[budget exhausted: {exc}]"
+                                yield {"event": "budget_exceeded", "stage": "tool",
+                                       "tool": call.name, "detail": str(exc)}
+                                budget_stop = True
+                                break
                             if tool_span is not None:
                                 tool_span.set("ok", ok)
                                 if not ok:
@@ -369,6 +387,8 @@ class Agent:
                         messages.append(feedback)
                         if self.memory is not None:
                             self.memory.append(thread, feedback)
+                    if budget_stop:
+                        break
                     continue
 
                 text = assistant.text

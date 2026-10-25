@@ -118,6 +118,77 @@ def cmd_deps_check(args: argparse.Namespace) -> int:
     return 1
 
 
+def cmd_redteam(args: argparse.Namespace) -> int:
+    """Run the adversarial corpus against a demo agent you can configure."""
+    from .agent import Agent, ScriptedModel
+    from .evals import red_team
+    from .govern import AutoApprover, AuditLog, Guard, Policy
+
+    if args.prompt:
+        target = lambda prompt: prompt  # noqa: E731 - identity target for check-only runs
+    else:
+        policy = Policy.from_dict(
+            {
+                "name": "redteam",
+                "default": "deny",
+                "rules": [{"name": "read", "action": ["search_notes", "lookup"], "effect": "allow"}],
+            }
+        )
+        target = Agent(
+            "target",
+            model=ScriptedModel([args.reply]),
+            guard=Guard(policy=policy, audit=AuditLog(), approver=AutoApprover()),
+        )
+
+    report = red_team(target, name="cli", canaries=args.canary or ())
+    if args.format == "json":
+        _out(report.to_json())
+    elif args.format == "md":
+        _out(report.to_markdown())
+    else:
+        _out(report.summary())
+        for verdict in report.failures():
+            _out(f"  FAIL {verdict.attack.id} ({verdict.attack.asi}) — {verdict.reason}")
+    if args.fail_under is not None and report.pass_rate < args.fail_under:
+        return 1
+    return 0 if report.ok else 1
+
+
+def cmd_mcp(args: argparse.Namespace) -> int:
+    """Inspect an MCP server: profile, capabilities and tools."""
+    from .mcp import McpClient
+
+    if not args.command and not args.url:
+        _out("usage: rister mcp --command <server command...>  |  rister mcp --url http://host/mcp")
+        return 2
+    try:
+        if args.url:
+            client = McpClient.http(args.url, timeout=args.timeout)
+        else:
+            client = McpClient.stdio(args.command, timeout=args.timeout)
+    except Exception as exc:  # noqa: BLE001 - surface the reason, do not traceback
+        _out(f"connection failed: {exc}")
+        return 2
+    try:
+        tools = client.list_tools()
+        if args.format == "json":
+            _out(json.dumps({"session": client.describe(), "tools": tools}, indent=2))
+        else:
+            _out(f"server: {client.server_info.get('name', '?')} "
+                 f"({client.server_info.get('version', '?')})")
+            _out(f"profile: {client.profile} · protocol {client.protocol_version}")
+            _out(f"capabilities: {', '.join(sorted(client.server_capabilities)) or 'none'}")
+            _out(f"tools ({len(tools)}):")
+            for entry in tools:
+                required = ", ".join(entry["inputSchema"]["required"]) or "-"
+                _out(f"  {entry['name']:<24} required: {required}")
+                if entry["description"]:
+                    _out(f"    {entry['description'][:100]}")
+    finally:
+        client.close()
+    return 0
+
+
 def cmd_demo(args: argparse.Namespace) -> int:
     from .demo import run_demo
 
@@ -148,6 +219,26 @@ def build_parser() -> argparse.ArgumentParser:
     subs = parser.add_subparsers(dest="command", required=True)
 
     subs.add_parser("version", help="print the version").set_defaults(func=cmd_version)
+
+    redteam = subs.add_parser("redteam", help="run the adversarial corpus (OWASP ASI01-10)")
+    redteam.add_argument("--format", choices=["text", "json", "md"], default="text")
+    redteam.add_argument("--reply", default="I can't help with that.",
+                         help="scripted reply for the built-in target agent")
+    redteam.add_argument("--prompt", action="store_true",
+                         help="use an identity target instead of an agent")
+    redteam.add_argument("--canary", action="append",
+                         help="canary string that must never appear in output")
+    redteam.add_argument("--fail-under", type=float,
+                         help="exit 1 when the pass rate is below this fraction")
+    redteam.set_defaults(func=cmd_redteam)
+
+    mcp = subs.add_parser("mcp", help="inspect an MCP server's tools")
+    mcp.add_argument("--command", nargs=argparse.REMAINDER,
+                     help="server command, e.g. -- python -m rister.mcp")
+    mcp.add_argument("--url", help="Streamable HTTP endpoint instead of a command")
+    mcp.add_argument("--timeout", type=float, default=20.0)
+    mcp.add_argument("--format", choices=["text", "json"], default="text")
+    mcp.set_defaults(func=cmd_mcp)
 
     demo = subs.add_parser("demo", help="run an offline end-to-end demonstration")
     demo.add_argument("--quiet", action="store_true", help="only print the summary")

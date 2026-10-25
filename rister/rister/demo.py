@@ -229,6 +229,113 @@ def run_demo(verbose: bool = True) -> int:
     for name, bucket in list(summary["by_name"].items())[:6]:
         say(f"     {name:24} x{bucket['count']:<3} {bucket['total_ms']}ms")
 
+    # 9. consumption budgets -------------------------------------------------
+    say("\n9. Consumption budget (stops the run at the limit)")
+    from .govern import Budget, BudgetedModel
+
+    from .core.types import Completion, Message, Usage
+    from .agent.backend import CallableModel
+
+    budget = Budget(max_tokens=120, cost_per_1k_in=0.003, cost_per_1k_out=0.015,
+                    name="demo-run")
+
+    def metered_backend(messages, tools=None, **options):
+        return Completion(message=Message.assistant("ok"), usage=Usage(40, 20))
+
+    metered = BudgetedModel(CallableModel(metered_backend), budget)
+    spent = 0
+    for _ in range(6):
+        try:
+            metered.complete([])
+            spent += 1
+        except Exception as exc:  # noqa: BLE001 - the demo shows the refusal
+            say(f"   refused after {spent} calls: {exc}")
+            break
+    say(f"   {budget.summary()}")
+
+    # 10. sensitive-data redaction -----------------------------------------
+    say("\n10. Redaction (both directions, deterministic)")
+    from .govern import Redactor, RedactingModel
+
+    redactor = Redactor(keep_last=4)
+    risky = "mail ada@example.test or use card 4111 1111 1111 1111, key sk-demo-abcdefghij123456"
+    clean, found = redactor.redact(risky)
+    say(f"   detected: {sorted({m.kind for m in found})}")
+    say(f"   outbound: {clean[:96]}")
+    guarded_model = RedactingModel(ScriptedModel(["contact ada@example.test"]), redactor)
+    scrubbed = guarded_model.complete([Message.user("email ada@example.test")])
+    say(f"   inbound:  {scrubbed.message.content}")
+
+    # 11. retrieval --------------------------------------------------------
+    say("\n11. Retrieval over local text (BM25 + hashed embeddings)")
+    from .agent.retrieval import Retriever
+
+    retriever = Retriever.from_texts(
+        [
+            "Budgets cap tokens, cost and wall-clock time, and refuse the next call.",
+            "Policies decide allow, deny or approve; the guard audits every decision.",
+            "The audit log is a hash chain, so editing an entry breaks verification.",
+        ],
+        strategy="hybrid",
+    )
+    hits = retriever.search("audit log editing", k=1)
+    if hits:
+        say(f"   best match: {hits[0].text[:72]!r} (score {hits[0].score:.3f})")
+    else:
+        say("   no passage cleared the score floor")
+
+    # 12. MCP --------------------------------------------------------------
+    say("\n12. MCP tool federation (in-process server)")
+    from .mcp import McpClient, McpServer
+
+    remote = McpServer([search_notes], name="demo-mcp")
+    with McpClient.loopback(remote.handle) as client:
+        say(f"   profile={client.profile} protocol={client.protocol_version} "
+            f"tools={[t.name for t in client.tools()]}")
+        say(f"   remote call -> {client.call_tool('search_notes', {'query': 'governance'})[:60]}")
+
+    # 13. adversarial evaluation -------------------------------------------
+    say("\n13. Red team (OWASP ASI01-ASI10)")
+    from .evals import red_team
+
+    safe = Agent("target", model=ScriptedModel(["I can't help with that."]))
+    report = red_team(safe, name="demo", canaries=["CANARY-DEMO"])
+    say(f"   {report.summary()}")
+    weak = report.by_category()
+    say(f"   categories covered: {len(weak)} · gate: {'PASS' if report.ok else 'FAIL'}")
+
+    # 14. durable stores ---------------------------------------------------
+    say("\n14. Durable interrupts (SQLite, resumed from a second instance)")
+    from .graph import END, START, Graph, SqliteSnapshotStore
+    from .state import Append, State
+    import tempfile as _tempfile
+
+    class Durable(State):
+        topic: str = ""
+        steps: list = Append()
+
+    def checkpoint(state: Durable, ctx) -> dict:
+        answer = ctx.interrupt({"question": f"continue {state.topic}?"})
+        return {"steps": [f"resumed with {answer}"]}
+
+    pipeline = Graph(Durable, "durable")
+    pipeline.add_node("checkpoint", checkpoint)
+    pipeline.add_edge(START, "checkpoint")
+    pipeline.add_edge("checkpoint", END)
+
+    with _tempfile.TemporaryDirectory() as directory:
+        database = f"{directory}/runs.db"
+        first = pipeline.compile(store=SqliteSnapshotStore(database)).invoke(
+            {"topic": "durability"}, config={"thread_id": "demo"}
+        )
+        # a second process would open the same file and see the paused run
+        reopened = SqliteSnapshotStore(database)
+        paused = reopened.load("demo")
+        say(f"   paused: interrupted={first.interrupted} step={paused.step} "
+            f"status={paused.status}")
+        second = pipeline.compile(store=reopened).resume(True, {"thread_id": "demo"})
+        say(f"   resumed from disk: status={second.status} steps={second.values['steps']}")
+
     say("\n" + "=" * 72)
     say("demo complete — no API key, no network, fully deterministic")
     say("=" * 72)

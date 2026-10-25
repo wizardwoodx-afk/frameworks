@@ -2,7 +2,7 @@
 
     python -m rister.tests            # run everything
     python -m rister.tests -v         # verbose
-    python -m rister.tests state      # only tests/test_state.py
+    python -m rister.tests state      # only tests/test_state*.py
 
 The test functions are plain ``test_*`` callables, so ``pytest rister/tests``
 works too if pytest is installed.
@@ -14,26 +14,21 @@ import sys
 import traceback
 from pathlib import Path
 
-MODULES = [
-    "rister.tests.test_state",
-    "rister.tests.test_graph",
-    "rister.tests.test_agent",
-    "rister.tests.test_govern",
-    "rister.tests.test_security_observe_evals",
-    "rister.tests.test_debranding",
-    "rister.tests.test_architecture",
-]
+#: Discovered from the package itself, never hand-written: a hardcoded list is a
+#: silent-skip waiting to happen. Adding ``test_foo.py`` is enough to run it.
+MODULES = sorted(
+    f"rister.tests.{path.stem}"
+    for path in Path(__file__).resolve().parent.glob("test_*.py")
+)
 
 
 def discover(selectors: list[str]) -> list:
     names = [m for m in MODULES if not selectors or any(s in m for s in selectors)]
-    modules = []
-    for name in names:
-        try:
-            modules.append(importlib.import_module(name))
-        except ImportError as exc:  # pragma: no cover
-            print(f"could not import {name}: {exc}")
-    return modules
+    if not names:
+        raise SystemExit(f"no test module matches {selectors!r}")
+    # An unimportable test module is a failure, not a note: skipping it silently
+    # is how a suite reports green while covering nothing.
+    return [importlib.import_module(name) for name in names]
 
 
 def main(argv: list[str]) -> int:

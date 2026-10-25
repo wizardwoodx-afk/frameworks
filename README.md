@@ -6,12 +6,12 @@ upstream projects they were studied from, vendored as pinned submodules.
 
 | | What | Where |
 |---|---|---|
-| ⭐ | **RISTER** — one framework: typed state graphs, agents, policy enforcement, audit, sandboxing, security scanning, tracing, evals, HTTP serving. Zero runtime dependencies. 80 tests. | [`rister/`](rister/) · **[architecture](docs/architecture.html)** · [design](docs/07-rister.md) · [debranding](docs/08-debranding.md) |
+| ⭐ | **RISTER** — one framework: typed state graphs, agents, policy enforcement, audit, sandboxing, budgets, redaction, MCP interop, retrieval, adversarial red-teaming, security scanning, tracing, evals, HTTP serving. Zero runtime dependencies. 172 tests. | [`rister/`](rister/) · **[architecture](docs/architecture.html)** · [design](docs/07-rister.md) · [debranding](docs/08-debranding.md) |
 | | Six upstream frameworks, pinned to their latest stable releases and verified working | [`vendor/`](vendor/) · [verification log](docs/verification.md) |
 
 ```bash
 cd rister && python -m rister demo     # offline end-to-end walkthrough, no API key
-python -m rister.tests                 # 80 tests, no test runner needed
+python -m rister.tests                 # 172 tests, no test runner needed
 ```
 
 ---
@@ -107,9 +107,9 @@ Tabs, not subdirectories: `vendor/mastra` *is* `mastra-ai/mastra`, checked out a
 ├── README.md                  this file
 ├── THIRD-PARTY-NOTICES.md     license + attribution summary
 ├── Makefile                   make bootstrap | verify | status | pins | rister-* | clean
-├── rister/                    ⭐ RISTER framework (zero dependencies, 80 tests)
+├── rister/                    ⭐ RISTER framework (zero dependencies, 172 tests)
 │   ├── rister/                core, state, graph, agent, govern, security,
-│   │                          observe, evals, serve, demo, tests
+│   │                          observe, evals, mcp, serve, demo, tests
 │   ├── README.md              full framework documentation
 │   ├── examples/              4 runnable, offline examples
 │   └── pyproject.toml         pip-installable (console script: rister)

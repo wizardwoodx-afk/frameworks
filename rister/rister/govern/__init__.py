@@ -10,6 +10,8 @@ from .approval import (
     QueueApprover,
     Ticket,
 )
+from .budget import Budget, BudgetedModel, BudgetMiddleware
+from .redact import RedactingModel, Redactor, redact_tool
 from .audit import AuditEntry, AuditLog, FileAuditLog, Verification, digest
 from .guard import Guard
 from .identity import (
@@ -53,6 +55,12 @@ from .supply_chain import (
 )
 
 __all__ = [
+    "Budget",
+    "BudgetedModel",
+    "BudgetMiddleware",
+    "Redactor",
+    "RedactingModel",
+    "redact_tool",
     "Decision",
     "Policy",
     "PolicySet",
