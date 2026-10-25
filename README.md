@@ -94,6 +94,7 @@ Tabs, not subdirectories: `vendor/mastra` *is* `mastra-ai/mastra`, checked out a
 │   ├── bootstrap.sh           clone/update submodules (--shallow, --only, --jobs, --status)
 │   ├── verify.sh              install pinned packages + run smoke tests
 │   ├── sync-pins.sh           detect/apply upstream release drift
+│   ├── relink.sh              restore gitlinks if 'git add -A' dropped them
 │   └── _apply_pins.py         helper for --write
 ├── smoke/
 │   ├── python/smoke_test.py   11 functional checks (LangGraph + BeeAI + AGT)
@@ -125,6 +126,24 @@ cd vendor/mastra && git fetch origin && git log --oneline HEAD..origin/main | he
 ```
 
 `scripts/sync-pins.sh` never silently moves a pin: it resolves each upstream's latest release, prints a drift table, and only mutates `MANIFEST.json` when you pass `--write`.
+
+## Troubleshooting
+
+**`git status` shows all six `vendor/*` entries as deleted.** This happens if you run
+`git add -A` *before* the submodules are initialised: their directories are empty, so Git
+interprets them as removed gitlinks. It cannot happen once they are initialised. Fix:
+
+```bash
+./scripts/relink.sh          # or: make relink — restores all six from MANIFEST.json
+./scripts/bootstrap.sh       # then clone them for real
+```
+
+**A clone failed.** `bootstrap.sh` reads the upstream URL from `MANIFEST.json` (not from the
+directory name — the six slugs differ from their local names, e.g. `i-am-bee/beeai-framework`).
+Re-running is safe and resumes; the first few lines of the failing `git clone` are printed.
+
+**`agt` not found after `pip install`.** It lands in the venv's `bin/`; activate the venv or
+call `.venv/bin/agt`. The smoke test resolves it next to `sys.executable` for this reason.
 
 ## Known, expected noise
 

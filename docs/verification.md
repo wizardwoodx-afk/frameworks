@@ -175,6 +175,8 @@ These are the interesting part of the log — each one would have shipped as a b
 | 8 | `agt` is the only CLI | Four entry points: `agt`, `agent-governance`, `agent-governance-toolkit`, `agent-compliance` | documented all four |
 | 9 | AGT repo layout at `v4.1.0` matches `main` | `agent-governance-codex-cli/` and `schemas/` exist only on `main` | documented against the **pinned tree** |
 | 10 | `shutil.which("agt")` finds the CLI | The entry point lives in `.venv/bin`, which may not be on `PATH` | resolve next to `sys.executable` |
+| 11 | Clone URL can be derived from the local name (`https://github.com/<name>.git`) | Slugs differ: `i-am-bee/beeai-framework`, `VoltAgent/voltagent`, `microsoft/agent-governance-toolkit`, `openai/codex-security`, `langchain-ai/langgraph`, `mastra-ai/mastra` | `bootstrap.sh` now reads `url` from `MANIFEST.json` |
+| 12 | Gitlinks survive `git add -A` | They do **once initialised**; before that, empty dirs make `git add -A` stage deletions | added `scripts/relink.sh` / `make relink` + a README troubleshooting note |
 
 ## 6. Expected noise (not failures)
 
@@ -187,7 +189,37 @@ These are the interesting part of the log — each one would have shipped as a b
   Importing `@voltagent/core` refreshes a model registry in the background. The sandbox
   blocks the host; module loading and agent construction are unaffected.
 
-## 7. Reproducing all of it
+## 7. End-to-end test in a clean clone
+
+The tooling was validated the way a new user would experience it — `git clone` this
+repository into an empty directory, then run the scripts (not the working copy):
+
+```bash
+git clone <this-repo> /tmp/testc && cd /tmp/testc
+
+./scripts/bootstrap.sh --shallow --only beeai-framework
+#   [beeai-framework] ok (0304ca17c975)   9.1M
+#   -> git submodule status: 0304ca17c975... vendor/beeai-framework (python_v0.1.85)
+#   -> vendor/beeai-framework/.git = "gitdir: ../../.git/modules/vendor/beeai-framework"
+#      i.e. it is a genuine submodule, not a plain directory
+
+./scripts/bootstrap.sh --shallow --jobs 2 --only voltagent,langgraph
+#   parallel clone path works: langgraph ok (16M), voltagent ok (27M)
+
+./scripts/bootstrap.sh --status
+#   langgraph / beeai-framework / voltagent ....... ok
+#   mastra / agent-governance-toolkit / codex-security ... not initialised
+
+./scripts/verify.sh
+#   11 passed, 0 failed, 0 skipped     (python)
+#    8 passed, 0 failed                (node)
+#   ALL CHECKS PASSED
+```
+
+That run installed the pinned wheels and npm packages from scratch in the clone and
+executed all 19 checks — so the flow in the README is the flow that was actually tested.
+
+## 8. Reproducing all of it
 
 ```bash
 ./scripts/bootstrap.sh --shallow   # ~526 MB of upstream source

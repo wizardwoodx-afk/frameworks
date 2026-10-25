@@ -56,7 +56,7 @@ import json,sys
 m=json.load(open("MANIFEST.json"))
 for f in m["frameworks"]:
     if f["id"]==sys.argv[1]:
-        print(f["pin"]["sha"], f["pin"]["tag"], f["packages"][0].get("name",""), f["packages"][0].get("version",""))
+        print(f["pin"]["sha"], f["pin"]["tag"], f["url"], f["packages"][0].get("name",""))
         break
 PY
 }
@@ -64,7 +64,7 @@ PY
 # ---- status mode -------------------------------------------------------------
 if [ "$STATUS_ONLY" = "1" ]; then
   c_hdr "Submodule status (pinned vs checked out)"
-  printf '%-30s %-13s %-13s %s\n' REPO PINNED CHECKED OUT STATE
+  printf '%-30s %-13s %-13s %s\n' "REPO" "PINNED" "CHECKED OUT" "STATE"
   for n in "${SELECTED[@]}"; do
     read -r sha tag _ _ <<< "$(pin_of "$n")"
     if [ -d "vendor/$n/.git" ] || [ -f "vendor/$n/.git" ]; then
@@ -102,7 +102,7 @@ ensure_gitlink() {
 # via `git submodule absorbgitdirs`.
 clone_one() {
   local n="$1"
-  read -r sha tag _ _ <<< "$(pin_of "$n")"
+  read -r sha tag url _ <<< "$(pin_of "$n")"
   local dir="vendor/$n"
   ensure_gitlink "$n" "$sha"
 
@@ -117,13 +117,13 @@ clone_one() {
   echo "[$n] cloning $tag ($sha) ..."
   local depth=()
   [ "$SHALLOW" = "1" ] && depth=(--depth 1)
-  if git clone --quiet --no-checkout "${depth[@]}" --branch "$tag" \
-        "https://github.com/$n.git" "$dir" 2>/dev/null \
-     || git clone --quiet "${depth[@]}" "https://github.com/$n.git" "$dir" 2>/dev/null; then
+  if git clone --quiet --no-checkout "${depth[@]}" --branch "$tag" "$url" "$dir" 2>/tmp/clone-$n.err \
+     || git clone --quiet "${depth[@]}" "$url" "$dir" 2>>/tmp/clone-$n.err; then
     git -C "$dir" checkout --quiet "$sha" 2>/dev/null || git -C "$dir" checkout --quiet "$tag" 2>/dev/null
     c_ok "[$n] ok ($(git -C "$dir" rev-parse --short=12 HEAD))"
   else
     c_err "[$n] clone FAILED"
+    sed -n '1,3p' "/tmp/clone-$n.err" 2>/dev/null | sed 's/^/    /' 
     return 1
   fi
 }
@@ -150,15 +150,15 @@ git submodule init >/dev/null 2>&1 || true
 # ---- summary -----------------------------------------------------------------
 echo
 c_hdr "Result"
-printf '%-30s %-13s %-10s %s\n' REPO HEAD PIN MATCH DIR-SIZE
+printf '%-30s %-13s %-10s %-6s %s\n' "REPO" "HEAD" "PIN" "MATCH" "SIZE"
 for n in "${SELECTED[@]}"; do
   read -r sha tag _ _ <<< "$(pin_of "$n")"
   if [ -e "vendor/$n/.git" ]; then
     cur="$(git -C "vendor/$n" rev-parse --short=12 HEAD)"
     [ "${cur:0:12}" = "${sha:0:12}" ] && ok="yes" || ok="NO"
-    printf '%-30s %-13s %-10s %s\n' "$n" "$cur" "$ok" "$(du -sh "vendor/$n" 2>/dev/null | cut -f1)"
+    printf '%-30s %-13s %-10s %-6s %s\n' "$n" "$cur" "${sha:0:12}" "$ok" "$(du -sh "vendor/$n" 2>/dev/null | cut -f1)"
   else
-    printf '%-30s %-13s %-10s %s\n' "$n" "-" "-" "MISSING"
+    printf '%-30s %-13s %-10s %-6s %s\n' "$n" "-" "${sha:0:12}" "-" "MISSING"
   fi
 done
 
