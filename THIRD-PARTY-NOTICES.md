@@ -6,6 +6,33 @@ history. Each is mounted as a git submodule at a pinned commit (see
 `./scripts/bootstrap.sh` clones the upstream repositories in full, and their original
 license files are preserved verbatim at `vendor/<name>/LICENSE*`.
 
+## RISTER
+
+RISTER ([`rister/`](rister/)) is an independent, clean-room synthesis written for this
+repository. It contains **no source code** from the projects below: their capabilities were
+reimplemented behind a single brand-neutral API (see
+[`docs/07-rister.md`](docs/07-rister.md) and [`docs/08-debranding.md`](docs/08-debranding.md)).
+
+Those projects were studied for their *design and feature set*, and the names below are
+recorded here — not in the framework — for provenance. Where a specific idea came from a
+specific project, that influence is acknowledged here rather than carried into RISTER's
+public surface. Nothing in RISTER's code, API, CLI or documentation reproduces their
+branding; `rister/tests/test_debranding.py` enforces that in CI.
+
+| Idea RISTER drew on | Informed by |
+|---|---|
+| typed state with reducers, superstep execution, snapshot/replay, interrupts | LangGraph (MIT) |
+| agent runtime, model routing, workflow steps, memory, evals, tracing | Mastra (Apache-2.0) |
+| multi-agent composition, agent-as-tool, tool registries, MCP-style tools | BeeAI Framework (Apache-2.0) |
+| supervisor/sub-agent patterns, tool lifecycle, structured memory | VoltAgent (MIT) |
+| deterministic pre-execution policy, agent identity, ring sandboxing, audit chains | Agent Governance Toolkit (MIT) |
+| repository scanning, SARIF/JSON/CSV reporting, remediation guidance | Codex Security (see licence below) |
+
+Licence texts for the vendored copies remain at `vendor/<name>/LICENSE*`; consult each
+project before reusing *their* code, which RISTER does not include.
+
+---
+
 The scripts, documentation, and smoke tests authored in this repository are provided
 as-is for integration and evaluation purposes.
 

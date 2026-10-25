@@ -1,4 +1,4 @@
-.PHONY: help bootstrap bootstrap-fast status verify verify-python verify-node pins pins-write relink clean docs-check
+.PHONY: help bootstrap bootstrap-fast status verify verify-python verify-node pins pins-write relink clean docs-check rister-demo rister-test rister-scan rister-check
 
 help:
 	@echo "Agent frameworks vendoring repo"
@@ -10,6 +10,10 @@ help:
 	@echo "  make pins            report upstream drift (read-only)"
 	@echo "  make pins-write      update MANIFEST.json to latest releases"
 	@echo "  make relink          restore submodule gitlinks from MANIFEST.json"
+	@echo "  make rister-demo     run the RISTER end-to-end demo (offline)"
+	@echo "  make rister-test     run the RISTER test suite (69 tests)"
+	@echo "  make rister-scan     self-scan RISTER with its own security scanner"
+	@echo "  make rister-check    test + demo + scan gate (no network, no deps)"
 	@echo "  make clean           remove .venv and node_modules (keeps vendor/)"
 
 bootstrap:
@@ -35,6 +39,18 @@ pins:
 
 pins-write:
 	./scripts/sync-pins.sh --write
+
+rister-demo:
+	cd rister && PYTHONPATH=. python3 -m rister demo
+
+rister-test:
+	cd rister && PYTHONPATH=. python3 -m rister.tests
+
+rister-scan:
+	cd rister && PYTHONPATH=. python3 -m rister scan rister --fail-on-severity high
+
+rister-check: rister-test rister-demo rister-scan
+	@echo "RISTER: tests, demo and self-scan all passed"
 
 relink:
 	./scripts/relink.sh

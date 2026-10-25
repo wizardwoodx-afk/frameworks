@@ -14,6 +14,40 @@ permissions:
   contents: read
 
 jobs:
+  rister:
+    name: RISTER (zero-dependency framework)
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Test suite
+        working-directory: rister
+        run: python -m rister.tests -v
+      - name: End-to-end demo
+        working-directory: rister
+        run: python -m rister demo
+      - name: Self-scan (must stay clean)
+        working-directory: rister
+        run: python -m rister scan rister --fail-on-severity high
+      - name: Prompt gate
+        working-directory: rister
+        run: |
+          python -m rister prompt check prompts/system.txt --min-grade B
+      - name: Dependency hygiene
+        working-directory: rister
+        run: python -m rister deps check .
+      - name: Install and run the console script
+        working-directory: rister
+        run: |
+          pip install -e .
+          rister version
+          rister --help
+
   python:
     runs-on: ubuntu-latest
     steps:

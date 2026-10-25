@@ -1,6 +1,22 @@
-# Agent Frameworks — vendored, pinned, verified
+# RISTER + vendored frameworks
 
-Six production agent frameworks and security SDKs, cloned into this repository as **git submodules**, pinned to their latest stable releases, documented, and backed by **smoke tests that actually execute framework code**.
+This repository contains **RISTER** — a single, unified, brand-neutral framework that
+synthesises the capabilities of six leading agent frameworks — alongside the six
+upstream projects they were studied from, vendored as pinned submodules.
+
+| | What | Where |
+|---|---|---|
+| ⭐ | **RISTER** — one framework: typed state graphs, agents, policy enforcement, audit, sandboxing, security scanning, tracing, evals, HTTP serving. Zero runtime dependencies. 72 tests. | [`rister/`](rister/) · [design](docs/07-rister.md) · [debranding](docs/08-debranding.md) |
+| | Six upstream frameworks, pinned to their latest stable releases and verified working | [`vendor/`](vendor/) · [verification log](docs/verification.md) |
+
+```bash
+cd rister && python -m rister demo     # offline end-to-end walkthrough, no API key
+python -m rister.tests                 # 72 tests, no test runner needed
+```
+
+---
+
+## The vendored sources
 
 | # | Framework | Language | Pinned version | License | Upstream |
 |---|-----------|----------|----------------|---------|----------|
@@ -53,6 +69,8 @@ Per-framework details, architecture notes, and runnable examples live in [`docs/
 | [docs/04-voltagent.md](docs/04-voltagent.md) | Agent runtime, supervisors, server adapters, sandboxes |
 | [docs/05-agent-governance-toolkit.md](docs/05-agent-governance-toolkit.md) | Policy enforcement, identity, sandboxing, SRE |
 | [docs/06-codex-security.md](docs/06-codex-security.md) | CLI + TypeScript SDK, SARIF, GitHub Action |
+| [docs/07-rister.md](docs/07-rister.md) | **RISTER** — the merge rationale, architecture, invariants |
+| [docs/08-debranding.md](docs/08-debranding.md) | **RISTER** — terminology translation and how neutrality is enforced |
 | [docs/verification.md](docs/verification.md) | Exactly what was run and what it printed |
 
 ---
@@ -88,8 +106,14 @@ Tabs, not subdirectories: `vendor/mastra` *is* `mastra-ai/mastra`, checked out a
 ├── .gitmodules                the six submodule URLs
 ├── README.md                  this file
 ├── THIRD-PARTY-NOTICES.md     license + attribution summary
-├── Makefile                   make bootstrap | verify | status | pins | clean
-├── docs/                      one deep-dive per framework + verification log
+├── Makefile                   make bootstrap | verify | status | pins | rister-* | clean
+├── rister/                    ⭐ RISTER framework (zero dependencies, 72 tests)
+│   ├── rister/                core, state, graph, agent, govern, security,
+│   │                          observe, evals, serve, demo, tests
+│   ├── README.md              full framework documentation
+│   ├── examples/              4 runnable, offline examples
+│   └── pyproject.toml         pip-installable (console script: rister)
+├── docs/                      one deep-dive per framework, RISTER design, verification
 ├── scripts/
 │   ├── bootstrap.sh           clone/update submodules (--shallow, --only, --jobs, --status)
 │   ├── verify.sh              install pinned packages + run smoke tests
