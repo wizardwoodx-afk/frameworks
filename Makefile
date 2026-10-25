@@ -1,4 +1,4 @@
-.PHONY: help docs-sync bootstrap bootstrap-fast status verify verify-python verify-node pins pins-write relink clean docs-check rister-demo rister-test rister-scan rister-check
+.PHONY: help package docs-sync bootstrap bootstrap-fast status verify verify-python verify-node pins pins-write relink clean docs-check rister-demo rister-test rister-scan rister-check
 
 help:
 	@echo "Agent frameworks vendoring repo"
@@ -11,9 +11,10 @@ help:
 	@echo "  make pins-write      update MANIFEST.json to latest releases"
 	@echo "  make relink          restore submodule gitlinks from MANIFEST.json"
 	@echo "  make rister-demo     run the RISTER end-to-end demo (offline)"
-	@echo "  make rister-test     run the RISTER test suite (172 tests)"
+	@echo "  make rister-test     run the RISTER test suite (173 tests)"
 	@echo "  make rister-scan     self-scan RISTER with its own security scanner"
 	@echo "  make rister-check    test + demo + scan gate (no network, no deps)"
+	@echo "  make package         build rister-<version>.zip and test the archive"
 	@echo "  make docs-sync       rewrite the measured numbers in the docs"
 	@echo "  make clean           remove .venv and node_modules (keeps vendor/)"
 
@@ -57,6 +58,9 @@ relink:
 	./scripts/relink.sh
 
 # Sanity check: MANIFEST/gitmodules consistency + README doc links.
+package:
+	python3 scripts/package.py --out . --check --verify
+
 docs-sync:
 	python3 scripts/sync_docs.py
 

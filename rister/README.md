@@ -119,6 +119,19 @@ Each script runs offline and exits 0:
 python examples/01_graphs.py
 ```
 
+### Building a release archive
+
+```bash
+python3 ../scripts/package.py --verify     # or: make package, from the repo root
+```
+
+That produces `rister-<version>.zip` — the package, its tests, the examples, the
+architecture page and the design document, with a `MANIFEST.txt` listing every file and
+its SHA-256. The build is reproducible (sorted entries, fixed timestamps), carries no
+build residue, and `--verify` extracts the archive to a temporary directory and runs the
+suite, the demo, the CLI and the self-scan from inside it: an archive that cannot prove
+itself is not a release. Everything in it installs with `pip install` and no network.
+
 ## Architecture
 
 ```
@@ -552,7 +565,7 @@ Exit codes: `0` success, `1` findings or policy failure, `2` usage/error.
 ## Testing
 
 ```bash
-python -m rister.tests          # 172 tests, no third-party runner needed
+python -m rister.tests          # 173 tests, no third-party runner needed
 python -m rister.tests -v      # verbose
 python -m rister.tests govern   # one module
 pytest rister/tests             # also works if pytest is installed

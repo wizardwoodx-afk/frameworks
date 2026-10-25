@@ -428,21 +428,49 @@ def test_version_has_one_source_of_truth():
 
 
 def test_prose_files_quote_the_real_test_count():
-    """The READMEs, the Makefile and the design doc all state the suite size."""
+    """Every prose file that states the suite size must state the real one.
+
+    The package README is always checked. The repository-level files are checked
+    when present: a standalone distribution (sdist, release zip) legitimately
+    ships without the vendoring repo's README or Makefile, and this test must not
+    invent a failure for a correct package.
+    """
     stats = _source_stats()
-    files = [
+    package_readme = ROOT / "README.md"
+    assert package_readme.is_file(), "the package README is missing"
+
+    candidates = [
+        package_readme,
         ROOT.parent / "README.md",
-        ROOT / "README.md",
         ROOT.parent / "Makefile",
     ]
-    for path in files:
+    checked = 0
+    for path in candidates:
+        if not path.is_file():
+            continue
+        checked += 1
         text = path.read_text(encoding="utf-8")
         stated = {
             int(value.replace(",", ""))
             for value in re.findall(r"(?<![\d,])(\d[\d,]*) tests\b", text)
         }
         assert stated <= {stats["tests"]}, f"{path.name} quotes a stale test count: {stated}"
+    assert checked >= 1, "no prose file was checked for a test count"
+
     design = ROOT.parent / "docs" / "07-rister.md"
-    match = re.search(r"\*\*Tests:\*\* (\d+)", design.read_text(encoding="utf-8"))
-    assert match, "docs/07-rister.md no longer states a test count"
-    assert int(match.group(1)) == stats["tests"], "docs/07-rister.md quotes a stale test count"
+    if design.is_file():
+        match = re.search(r"\*\*Tests:\*\* (\d+)", design.read_text(encoding="utf-8"))
+        assert match, "docs/07-rister.md no longer states a test count"
+        assert int(match.group(1)) == stats["tests"], "docs/07-rister.md quotes a stale test count"
+
+
+def test_typing_marker_matches_the_packaging_metadata():
+    """pyproject ships ``py.typed``; a declaration without the file is a broken wheel."""
+    pyproject = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
+    declares = "py.typed" in pyproject
+    marker = (PACKAGE / "py.typed").exists()
+    assert declares == marker, (
+        "pyproject.toml declares py.typed but the file is missing"
+        if declares
+        else "py.typed is present but not declared as package data"
+    )
