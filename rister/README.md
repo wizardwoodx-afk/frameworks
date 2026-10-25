@@ -565,7 +565,7 @@ Exit codes: `0` success, `1` findings or policy failure, `2` usage/error.
 ## Testing
 
 ```bash
-python -m rister.tests          # 173 tests, no third-party runner needed
+python -m rister.tests          # 174 tests, no third-party runner needed
 python -m rister.tests -v      # verbose
 python -m rister.tests govern   # one module
 pytest rister/tests             # also works if pytest is installed

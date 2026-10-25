@@ -10,6 +10,7 @@ __pycache__/
 dist/
 build/
 *.zip
+!releases/*.zip
 
 # Smoke-test leftovers
 smoke/python/*.json

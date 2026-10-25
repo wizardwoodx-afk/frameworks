@@ -11,7 +11,7 @@ help:
 	@echo "  make pins-write      update MANIFEST.json to latest releases"
 	@echo "  make relink          restore submodule gitlinks from MANIFEST.json"
 	@echo "  make rister-demo     run the RISTER end-to-end demo (offline)"
-	@echo "  make rister-test     run the RISTER test suite (173 tests)"
+	@echo "  make rister-test     run the RISTER test suite (174 tests)"
 	@echo "  make rister-scan     self-scan RISTER with its own security scanner"
 	@echo "  make rister-check    test + demo + scan gate (no network, no deps)"
 	@echo "  make package         build rister-<version>.zip and test the archive"

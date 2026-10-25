@@ -119,13 +119,23 @@ def _framework_files() -> list[Path]:
     return sorted(set(chosen))
 
 
+#: Generated output; an archive must never contain itself or its siblings.
+OUTPUT_DIR = "releases"
+
+
 def _repo_files() -> list[Path]:
     """Everything: the merged framework and the record of what it merged."""
     files = _tracked()
     if not files:  # pragma: no cover - fallback when git is unavailable
         files = sorted(p for p in ROOT.rglob("*") if p.is_file() and _keep(p))
-    # A release archive never carries a previously built archive.
-    return [f for f in files if f.suffix not in SKIP_SUFFIXES]
+    return [
+        f for f in files
+        # A release archive never carries a previously built archive, nor the
+        # checksum file that describes it — otherwise it would contain its own
+        # hash, which cannot be computed.
+        if f.suffix not in SKIP_SUFFIXES
+        and OUTPUT_DIR not in f.relative_to(ROOT).parts
+    ]
 
 
 def payload(scope: str) -> tuple[str, list[Path]]:
