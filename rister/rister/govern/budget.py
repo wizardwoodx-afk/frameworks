@@ -103,9 +103,45 @@ class Budget:
                     self._fail("time", elapsed, self.max_seconds, "s")
         return self
 
-    def _fail(self, limit: str, used: float, allowed: float, unit: str) -> None:
+    def preflight(
+        self,
+        *,
+        requests: int = 1,
+        tokens: int = 0,
+        cost: float = 0.0,
+    ) -> "Budget":
+        """Refuse a call *before* it is made.
+
+        :meth:`check` answers "have we already crossed a limit?". This answers the
+        question a caller about to spend money actually has: "would the next call
+        cross one?"
+
+        A request count is knowable in advance and therefore never overshoots.
+        Token and cost usage are only known once the response arrives, so those
+        limits still need a post-hoc :meth:`charge`; pass ``tokens=`` (for
+        example the backend's ``max_tokens``) to turn them into a hard cap, or
+        ``reserve_tokens=`` on :class:`BudgetedModel` to do it for every call.
+        """
+        with self._lock:
+            if self.max_seconds is not None and self.elapsed > self.max_seconds:
+                self._fail("time", self.elapsed, self.max_seconds, "s")
+            # A refusal here means nothing was spent: report the projection, and
+            # say so, rather than pretending a call already happened.
+            if self.max_requests is not None and self.requests + requests > self.max_requests:
+                self._fail("request", self.requests + requests, self.max_requests,
+                           "requests", projected=True)
+            if self.max_tokens is not None and self.tokens + tokens > self.max_tokens:
+                self._fail("token", self.tokens + tokens, self.max_tokens, "tokens",
+                           projected=bool(tokens))
+            if self.max_cost is not None and self.cost + cost > self.max_cost:
+                self._fail("cost", self.cost + cost, self.max_cost, "", projected=bool(cost))
+        return self
+
+    def _fail(
+        self, limit: str, used: float, allowed: float, unit: str, *, projected: bool = False
+    ) -> None:
         self._exhausted = limit
-        raise BudgetExceeded(limit, used, allowed, unit)
+        raise BudgetExceeded(limit, used, allowed, unit, projected=projected)
 
     # -- inspection --------------------------------------------------------
     @property
@@ -115,6 +151,15 @@ class Budget:
     @property
     def exhausted(self) -> bool:
         return self._exhausted is not None
+
+    @property
+    def exhausted_limit(self) -> str | None:
+        """Which limit tripped (``"token"``, ``"cost"``, ``"request"``, …), if any.
+
+        ``exhausted`` answers whether; this answers which, without making a caller
+        parse the snapshot dict or the exception message.
+        """
+        return self._exhausted
 
     @property
     def remaining_tokens(self) -> int | None:
@@ -191,27 +236,50 @@ class BudgetedModel:
     ``complete`` can be budgeted, including a third-party backend.
     """
 
-    def __init__(self, inner: Any, budget: Budget, *, name: str | None = None) -> None:
+    def __init__(
+        self,
+        inner: Any,
+        budget: Budget,
+        *,
+        name: str | None = None,
+        reserve_tokens: int | None = None,
+    ) -> None:
         if not hasattr(inner, "complete"):
             raise ModelError("BudgetedModel needs a model with complete()")
         self.inner = inner
         self.budget = budget
         self.name = name or getattr(inner, "name", "budgeted")
+        #: Tokens to assume each call will consume, checked *before* it runs.
+        #: Without it a token cap can be overshot by one call, because usage is
+        #: only known after the response.
+        self.reserve_tokens = reserve_tokens
+
+    def _reserve(self, options: Mapping[str, Any]) -> int:
+        if self.reserve_tokens is not None:
+            return int(self.reserve_tokens)
+        limit = options.get("max_tokens") or options.get("max_completion_tokens")
+        return int(limit) if isinstance(limit, int) else 0
 
     def complete(self, messages: Any, tools: Any = None, **options: Any) -> Completion:
-        self.budget.check()  # refuse before spending anything
+        # Refuse before spending anything. The request count is knowable here;
+        # token and cost usage are not, unless the caller reserves an estimate.
+        self.budget.preflight(tokens=self._reserve(options))
         completion = self.inner.complete(messages, tools, **options)
         self.budget.charge(getattr(completion, "usage", None))
         return completion
 
     async def acomplete(self, messages: Any, tools: Any = None, **options: Any) -> Completion:
-        self.budget.check()
+        self.budget.preflight(tokens=self._reserve(options))
         result = await self.inner.acomplete(messages, tools, **options)
         self.budget.charge(getattr(result, "usage", None))
         return result
 
     def describe(self) -> dict[str, Any]:
-        return {"name": self.name, "budget": self.budget.snapshot()}
+        return {
+            "name": self.name,
+            "budget": self.budget.snapshot(),
+            "reserve_tokens": self.reserve_tokens,
+        }
 
     def __repr__(self) -> str:
         return f"<BudgetedModel {self.name} {self.budget.summary()}>"

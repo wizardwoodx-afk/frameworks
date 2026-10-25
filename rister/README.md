@@ -467,10 +467,23 @@ if not result.ok:
     print(result.status, budget.summary())    # budget_exceeded … EXHAUSTED (True)
 ```
 
-A budget **refuses before it spends**: the call that would cross the line never reaches the
-model, the counter never exceeds the limit, and the run ends with a terminal result
-(`status="budget_exceeded"`, `ok=False`, a `budget_exceeded` event) instead of an exception
-thrown through the middle of a graph.
+A budget **decides before the call, not after the bill**. What that means precisely:
+
+| Limit | Enforced | Can it overshoot? |
+|---|---|---|
+| `max_requests` | **before** the call | never — a count is knowable in advance |
+| `max_tool_calls` | **before** the call | never — refused before counting |
+| `max_seconds` | **before** the call | never |
+| `max_tokens`, `max_cost` | as soon as usage is reported | **by one call** — a provider reports tokens only in the response |
+
+Token overshoot is physics, not a bug, so it is exposed rather than hidden: the refused call
+never runs, and the error says so (`the next call would use 120 tokens of 100`). Want a hard
+cap? Give it an estimate — `BudgetedModel(model, budget, reserve_tokens=500)`, or simply pass
+`max_tokens` on the request and it is used as the estimate automatically.
+
+Either way the run ends with a terminal result (`status="budget_exceeded"`, `ok=False`, a
+`budget_exceeded` event) instead of an exception thrown through the middle of a graph, and
+`budget.exhausted_limit` tells you which limit tripped.
 
 ```python
 redactor = Redactor(keep_last=4)          # emails, cards (Luhn), SSNs, keys, tokens
@@ -565,7 +578,7 @@ Exit codes: `0` success, `1` findings or policy failure, `2` usage/error.
 ## Testing
 
 ```bash
-python -m rister.tests          # 174 tests, no third-party runner needed
+python -m rister.tests          # 182 tests, no third-party runner needed
 python -m rister.tests -v      # verbose
 python -m rister.tests govern   # one module
 pytest rister/tests             # also works if pytest is installed

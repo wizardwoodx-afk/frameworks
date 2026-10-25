@@ -6,7 +6,7 @@ API, with a single set of types, one error hierarchy and one vocabulary.
 
 - **Package:** [`rister/`](../rister/) — Python 3.10+, zero runtime dependencies
 - **Version:** 1.1.0
-- **Tests:** 174 (including suites that enforce brand-neutrality and keep this
+- **Tests:** 182 (including suites that enforce brand-neutrality and keep this
   page's numbers honest)
 - **Try it:** `cd rister && python -m rister demo`
 - **Architecture:** [`architecture.html`](architecture.html) — an interactive map of the
@@ -199,7 +199,7 @@ production. Nothing was added that a test does not exercise.
 | Addition | The gap it closes | What makes it real |
 |---|---|---|
 | **MCP client and server** (`rister.mcp`, 890 lines) | tools lived in one process; the rest of the ecosystem speaks MCP | both profiles (stateless 2026 and the legacy handshake), three transports, `structuredContent` so an `int` survives the wire, and remote tools that pass through the same `Guard` |
-| **Consumption budgets** (`govern/budget.py`) | "governed" said nothing about cost or runaway loops | refuses *before* spending, so the counter never exceeds the limit; exhaustion ends the run as a terminal `budget_exceeded` result instead of an exception escaping the loop |
+| **Consumption budgets** (`govern/budget.py`) | "governed" said nothing about cost or runaway loops | refuses *before* each call: request, tool-call and time caps are exact, and token/cost caps are exact too when given an estimate (`reserve_tokens=`) — otherwise they can overshoot by the one call whose usage is only known when it returns, and the error says so; exhaustion ends the run as a terminal `budget_exceeded` result instead of an exception escaping the loop |
 | **Redaction** (`govern/redact.py`) | secrets left the process in prompts and came back in tool output | five detectors (Luhn-checked cards), both directions, `keep_last` that actually keeps something |
 | **Retrieval** (`agent/retrieval.py`) | agents had memory but no way to read a corpus | BM25, hashed vectors and reciprocal-rank fusion, all offline and deterministic; `as_tool()` makes it a governed tool |
 | **Red team** (`evals/redteam.py`) | an eval suite said "it works", never "it can be broken" | 24 probes across OWASP ASI01–ASI10; refusals, guard blocks, policy denials and budget stops all count as passes, so the score measures the adversary |

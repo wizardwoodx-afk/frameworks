@@ -128,15 +128,31 @@ class ServeError(RisterError):
 class BudgetExceeded(RisterError):
     """A token, cost, time or call budget was exhausted."""
 
-    def __init__(self, limit: str, used: float, allowed: float, unit: str = "") -> None:
+    def __init__(
+        self,
+        limit: str,
+        used: float,
+        allowed: float,
+        unit: str = "",
+        *,
+        projected: bool = False,
+    ) -> None:
         self.limit = limit
         self.used = used
         self.allowed = allowed
         self.unit = unit
+        #: True when the call was stopped *before* running, so ``used`` is what it
+        #: would have reached rather than what has been spent.
+        self.projected = projected
         suffix = f" {unit}" if unit else ""
-        super().__init__(
-            f"{limit} budget exhausted: used {used:g}{suffix} of {allowed:g}{suffix}"
-        )
+        if projected:
+            message = (
+                f"{limit} budget exhausted: the next call would use "
+                f"{used:g}{suffix} of {allowed:g}{suffix}"
+            )
+        else:
+            message = f"{limit} budget exhausted: used {used:g}{suffix} of {allowed:g}{suffix}"
+        super().__init__(message)
 
 
 __all__ = [

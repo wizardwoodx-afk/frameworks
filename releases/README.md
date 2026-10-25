@@ -13,11 +13,11 @@ Each archive contains `ARCHIVE.md` (what is inside) and `MANIFEST.txt`
 
 ```bash
 sha256sum agent-frameworks-merged-1.1.0.zip
-# 46005658334f61f4adeca0e165296e1bebec65ecbabf496e53e76de4a9688df6
+# 7ebb404ba76777b823c337e8fdf3918bdd605cef82567c95d166832b3cd69996
 ```
 
 ```
-46005658334f61f4adeca0e165296e1bebec65ecbabf496e53e76de4a9688df6  agent-frameworks-merged-1.1.0.zip
+7ebb404ba76777b823c337e8fdf3918bdd605cef82567c95d166832b3cd69996  agent-frameworks-merged-1.1.0.zip
 ```
 
 ## These are checked against the source

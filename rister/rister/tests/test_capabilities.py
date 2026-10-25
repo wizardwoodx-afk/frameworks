@@ -68,7 +68,7 @@ def test_budget_raises_on_each_limit():
             assert budget.exhausted
 
 
-def test_budgeted_model_stops_before_spending():
+def test_budgeted_model_stops_within_one_call_of_the_limit():
     class Counting:
         name = "counting"
 
@@ -88,9 +88,15 @@ def test_budgeted_model_stops_before_spending():
         raise AssertionError("expected BudgetExceeded")
     except BudgetExceeded:
         pass
-    # it refuses *before* the call that would overspend
+    # Token usage is only known once the response arrives, so the call that
+    # crosses the line has already run when it is refused: the counter reads 200
+    # against a 120 limit. That overshoot is inherent, and it is why
+    # reserve_tokens= exists (see the next test) — the counter is never *silently*
+    # wrong, and no further call is made.
     assert model.calls == 2
     assert budget.tokens == 200  # charged for what actually ran
+    assert budget.exhausted is True
+    assert budget.exhausted_limit == "token", "the budget names which limit tripped"
 
 
 def test_budget_guards_tool_calls_through_a_guard_chain():
@@ -656,3 +662,146 @@ def test_serve_stream_unknown_agent():
     app = rs.App(agents={})
     frames = list(app.stream_events("ghost", "hi", {}))
     assert "error" in "".join(frames)
+
+
+# -- pre-flight refusals: the two limits that can be decided before the call ---
+def _counting_model(usage: Usage):
+    """A backend that records how many calls actually reached it."""
+    class Counting:
+        name = "counting"
+
+        def __init__(self) -> None:
+            self.calls = 0
+
+        def complete(self, messages, tools=None, **options):
+            self.calls += 1
+            return Completion(message=Message.assistant("ok"), usage=usage)
+
+        async def acomplete(self, messages, tools=None, **options):
+            return self.complete(messages, tools, **options)
+
+    return Counting()
+
+
+def test_request_cap_is_never_overshot():
+    """A request count is knowable in advance, so the cap must be exact."""
+    model = _counting_model(Usage(40, 20))
+    budget = Budget(max_requests=2)
+    wrapped = BudgetedModel(model, budget)
+    for _ in range(2):
+        wrapped.complete([])
+    try:
+        wrapped.complete([])
+        raise AssertionError("expected BudgetExceeded")
+    except BudgetExceeded as exc:
+        # Nothing was spent for the refused call, and the message says so.
+        assert "would use" in str(exc)
+        assert exc.projected is True
+    assert model.calls == 2, "the third call reached the backend"
+    assert budget.requests == 2, "the counter must not count a call that never ran"
+
+
+def test_reserve_tokens_turns_the_token_cap_into_a_hard_cap():
+    """With an estimate per call the overshoot disappears entirely."""
+    model = _counting_model(Usage(40, 20))  # 60 tokens per call
+    budget = Budget(max_tokens=100)
+    wrapped = BudgetedModel(model, budget, reserve_tokens=60)
+    wrapped.complete([])  # 60 used
+    try:
+        wrapped.complete([])  # 60 + 60 > 100 -> refused before it runs
+        raise AssertionError("expected BudgetExceeded")
+    except BudgetExceeded as exc:
+        assert "would use 120 tokens of 100 tokens" in str(exc)
+    assert model.calls == 1
+    assert budget.tokens == 60, "a refused call must not be charged"
+    assert wrapped.describe()["reserve_tokens"] == 60
+
+
+def test_reserve_tokens_can_come_from_the_request_max_tokens():
+    """A per-request max_tokens is an estimate too, and is used automatically."""
+    model = _counting_model(Usage(40, 20))
+    budget = Budget(max_tokens=100)
+    wrapped = BudgetedModel(model, budget)
+    try:
+        wrapped.complete([], max_tokens=120)  # 0 + 120 > 100 -> refused
+        raise AssertionError("expected BudgetExceeded")
+    except BudgetExceeded:
+        pass
+    assert model.calls == 0, "a call the estimate rules out must never run"
+    assert budget.tokens == 0
+
+
+# -- the async path is a real path, so it gets the same guarantees -------------
+def test_budget_is_enforced_on_the_async_path():
+    import asyncio
+
+    model = _counting_model(Usage(40, 20))
+    budget = Budget(max_tokens=100)
+    wrapped = BudgetedModel(model, budget, reserve_tokens=60)
+
+    first = asyncio.run(wrapped.acomplete([Message.user("hi")]))
+    assert first.message.content == "ok"
+    assert budget.tokens == 60 and budget.requests == 1
+
+    try:
+        asyncio.run(wrapped.acomplete([Message.user("again")]))
+        raise AssertionError("expected BudgetExceeded")
+    except BudgetExceeded as exc:
+        assert "would use" in str(exc)
+
+    assert model.calls == 1, "the refused async call reached the backend"
+    assert budget.tokens == 60, "the refused call was charged"
+
+
+def test_redacting_model_scrubs_on_the_async_path():
+    import asyncio
+
+    seen: dict[str, str] = {}
+
+    class Recorder:
+        name = "recorder"
+
+        def complete(self, messages, tools=None, **options):
+            seen["outbound"] = messages[-1].content
+            return Completion(message=Message.assistant("reply to ada@example.test"))
+
+        async def acomplete(self, messages, tools=None, **options):
+            return self.complete(messages, tools, **options)
+
+    wrapped = RedactingModel(Recorder(), Redactor())
+    result = asyncio.run(wrapped.acomplete([Message.user("mail ada@example.test")]))
+
+    assert "ada@example.test" not in seen["outbound"], "the prompt left unredacted"
+    assert "[REDACTED:email]" in seen["outbound"]
+    assert "ada@example.test" not in result.message.content, "the reply reached the caller unredacted"
+
+
+# -- the two scanner directives that had no coverage --------------------------
+def test_scanner_detects_shell_execution():
+    """SEC003: the pattern is built by concatenation so this file stays clean."""
+    from rister.security import Scanner
+
+    shell_true = "shell=" + "True"
+    text = f"import subprocess\nsubprocess.run(cmd, {shell_true})\n"
+    findings = Scanner().scan_text(text, "danger.py")
+    assert [f.rule for f in findings] == ["SEC003"]
+    assert findings[0].severity == "high"
+
+
+def test_scanner_detects_disabled_host_key_checking():
+    """SEC018: a ssh_config line that silently accepts any host key."""
+    from rister.security import Scanner
+
+    option = "StrictHostKeyChecking" + "=no"
+    findings = Scanner().scan_text(f"Host *\n    {option}\n", "ssh_config")
+    assert [f.rule for f in findings] == ["SEC018"]
+    assert findings[0].cwe == "CWE-295"
+
+
+def test_scanner_detects_os_system_execution():
+    """SEC003 also covers os.system and os.popen, not only subprocess."""
+    from rister.security import Scanner
+
+    call = "os." + "system(cmd)"
+    findings = Scanner().scan_text(f"import os\n{call}\n", "legacy.py")
+    assert [f.rule for f in findings] == ["SEC003"]

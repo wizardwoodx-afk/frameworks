@@ -175,9 +175,9 @@
     <div class="brand">RISTER<span class="dot">.</span>architecture</div>
     <div class="chips">
       <div class="chip"><b>0</b> runtime deps</div>
-      <div class="chip"><b>11,896</b> LOC</div>
+      <div class="chip"><b>12,071</b> LOC</div>
       <div class="chip"><b>114</b> exports</div>
-      <div class="chip"><b>174</b> tests</div>
+      <div class="chip"><b>182</b> tests</div>
       <div class="chip">python <b>3.10+</b></div>
     </div>
   </div>
@@ -197,7 +197,7 @@
     <div class="stats">
       <div class="stat"><div class="n">13</div><div class="k">modules</div></div>
       <div class="stat"><div class="n">59</div><div class="k">files</div></div>
-      <div class="stat"><div class="n">11,896</div><div class="k">significant LOC</div></div>
+      <div class="stat"><div class="n">12,071</div><div class="k">significant LOC</div></div>
       <div class="stat"><div class="n">140</div><div class="k">public classes</div></div>
       <div class="stat"><div class="n">20</div><div class="k">exception types</div></div>
       <div class="stat"><div class="n">0</div><div class="k">third-party imports</div></div>
@@ -546,14 +546,14 @@
     </div>
     <div class="cards" style="margin-top:16px">
       <div class="card"><div class="k">asymmetry</div><h4>govern is the largest module</h4>
-        <p>2,415 lines — 25% of the framework, and more than <code>agent</code>,
+        <p>2,470 lines — 25% of the framework, and more than <code>agent</code>,
           <code>graph</code> and <code>state</code> apart. Governance is the product; orchestration is the easy
           part.</p></div>
-      <div class="card"><div class="k">discipline</div><h4>core is 421 lines and imports nothing</h4>
+      <div class="card"><div class="k">discipline</div><h4>core is 435 lines and imports nothing</h4>
         <p>A small, dependency-free core is what keeps nine subsystems from turning into a
           tangle of cross-imports.</p></div>
-      <div class="card"><div class="k">verification</div><h4>2,179 lines of tests</h4>
-        <p>174 tests across 8 files, runnable with no third-party runner. Some of those files
+      <div class="card"><div class="k">verification</div><h4>2,285 lines of tests</h4>
+        <p>182 tests across 8 files, runnable with no third-party runner. Some of those files
           test the architecture itself: the dependency law, brand-neutrality, and the counts on
           this page.</p></div>
     </div>
@@ -570,10 +570,11 @@
 
     <div class="cards">
       <div class="card"><div class="k">consumption</div><h4>A budget refuses before it spends</h4>
-        <p><code>Budget(max_tokens=120)</code> wrapping a metered model stops the run on the
-          call that would cross the line: two calls, 180 tokens, then
-          <code>status="budget_exceeded"</code> — a terminal result, not an exception thrown
-          through the loop.</p></div>
+        <p>Request, tool-call and time caps are decided <em>before</em> the call, so they
+          cannot overshoot. Token and cost caps are checked the moment usage is reported —
+          or before the call when you pass <code>reserve_tokens=</code> — and a refusal
+          always ends the run as a terminal <code>budget_exceeded</code> result, never as an
+          exception thrown through the loop.</p></div>
       <div class="card"><div class="k">privacy</div><h4>Redaction runs in both directions</h4>
         <p><code>Redactor</code> detects emails, Luhn-valid card numbers, SSNs, API keys and
           bearer tokens. <code>RedactingModel</code> scrubs what leaves; <code>keep_last=4</code>
@@ -605,7 +606,7 @@
   </section>
 
   <footer>
-    <div>RISTER 1.1.0 · generated from the source tree · 59 files · 11,896 significant LOC</div>
+    <div>RISTER 1.1.0 · generated from the source tree · 59 files · 12,071 significant LOC</div>
     <div>zero runtime dependencies · stdlib only · python 3.10+</div>
   </footer>
 </div>
@@ -613,7 +614,7 @@
 <script>
 const DATA = {
   modules: [
-    {id:"core", loc:421, files:"4 files", colour:"#f0b429",
+    {id:"core", loc:435, files:"4 files", colour:"#f0b429",
      desc:"The dependency-free floor: message and tool-call types, per-run configuration, and one exception hierarchy that every other module raises.",
      classes:[["Message","A single conversational turn."],
               ["ToolCall","A request to run a named tool with JSON arguments."],
@@ -658,7 +659,7 @@ const DATA = {
               ["Retriever","BM25, hashed embeddings, or a fused ranking over local text."],
               ["Prompt","A {placeholder} template with named defaults."]],
      pub:["Agent","ScriptedModel","HTTPModel","RouterModel","tool","Memory","Prompt","Tool"]},
-    {id:"govern", loc:2415, files:"11 files", colour:"#f0b429",
+    {id:"govern", loc:2470, files:"11 files", colour:"#f0b429",
      desc:"Deterministic enforcement: policy, the guard, signed identity, approvals, the audit chain, capability rings, prompt and dependency audits.",
      classes:[["Policy / Rule","Ordered rules, glob actions, argument predicates."],
               ["Guard","Authorise, approve, audit, or refuse — one check()."],
