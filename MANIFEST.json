@@ -1,0 +1,149 @@
+{
+  "schema": 1,
+  "generated": "2026-10-25",
+  "description": "Pinned inventory of the six agent frameworks vendored as git submodules under vendor/. Versions chosen = latest stable published release at time of pinning.",
+  "totals": {
+    "frameworks": 6,
+    "source_files": 23529,
+    "files_all": 32566,
+    "shallow_checkout_mb": 526,
+    "full_history_estimate_mb": 2317
+  },
+  "frameworks": [
+    {
+      "id": "langgraph",
+      "name": "LangGraph",
+      "org": "langchain-ai",
+      "repo": "langchain-ai/langgraph",
+      "url": "https://github.com/langchain-ai/langgraph.git",
+      "homepage": "https://docs.langchain.com/oss/python/langgraph/overview",
+      "path": "vendor/langgraph",
+      "languages": ["Python", "TypeScript"],
+      "license": "MIT",
+      "pin": {
+        "kind": "tag",
+        "tag": "1.2.17",
+        "sha": "4c52e129eb1ab69a3da58b799f67929f77d81149",
+        "committed": "2026-10-24T01:02:32Z"
+      },
+      "packages": [
+        { "ecosystem": "pypi", "name": "langgraph", "version": "1.2.17", "requires_python": ">=3.10" }
+      ],
+      "size": { "shallow": "20 MB", "full_history": "518 MB", "files": 698, "source_files": 487 },
+      "verified": { "installed": true, "ran_code": true, "detail": "StateGraph run + InMemorySaver checkpoint read-back" }
+    },
+    {
+      "id": "mastra",
+      "name": "Mastra",
+      "org": "mastra-ai",
+      "repo": "mastra-ai/mastra",
+      "url": "https://github.com/mastra-ai/mastra.git",
+      "homepage": "https://mastra.ai/docs",
+      "path": "vendor/mastra",
+      "languages": ["TypeScript"],
+      "license": "Apache-2.0 (ee/ directories are separately licensed, see ee/LICENSE)",
+      "pin": {
+        "kind": "tag",
+        "tag": "@mastra/core@1.79.0",
+        "sha": "4c22623ea342a0ce611e15f89f4ab8b377bf7ee8",
+        "committed": "2026-10-21T11:26:39Z"
+      },
+      "packages": [
+        { "ecosystem": "npm", "name": "@mastra/core", "version": "1.79.0" }
+      ],
+      "size": { "shallow": "348 MB", "full_history": "1633 MB", "files": 21588, "source_files": 17078 },
+      "verified": { "installed": true, "ran_code": true, "detail": "new Mastra({}) instantiated from @mastra/core 1.79.0" }
+    },
+    {
+      "id": "beeai-framework",
+      "name": "BeeAI Framework",
+      "org": "i-am-bee",
+      "repo": "i-am-bee/beeai-framework",
+      "url": "https://github.com/i-am-bee/beeai-framework.git",
+      "homepage": "https://framework.beeai.dev",
+      "path": "vendor/beeai-framework",
+      "languages": ["Python", "TypeScript"],
+      "license": "Apache-2.0",
+      "pin": {
+        "kind": "tag",
+        "tag": "python_v0.1.85",
+        "sha": "0304ca17c975e315e4867f697d49057e64c60764",
+        "committed": "2026-09-28T18:41:08Z"
+      },
+      "packages": [
+        { "ecosystem": "pypi", "name": "beeai-framework", "version": "0.1.85", "requires_python": ">=3.11,<3.14" },
+        { "ecosystem": "npm", "name": "beeai-framework", "version": "see typescript/package.json" }
+      ],
+      "size": { "shallow": "12 MB", "full_history": "16 MB", "files": 1196, "source_files": 1023 },
+      "verified": { "installed": true, "ran_code": true, "detail": "Workflow(inc->dbl) executed async; ReActAgent/ChatModel/OpenMeteoTool importable" }
+    },
+    {
+      "id": "voltagent",
+      "name": "VoltAgent",
+      "org": "VoltAgent",
+      "repo": "VoltAgent/voltagent",
+      "url": "https://github.com/VoltAgent/voltagent.git",
+      "homepage": "https://voltagent.dev/docs/",
+      "path": "vendor/voltagent",
+      "languages": ["TypeScript"],
+      "license": "MIT",
+      "pin": {
+        "kind": "tag",
+        "tag": "@voltagent/core@2.11.0",
+        "sha": "72a46c76b4507e1f98b41d5050a92bd30587eb70",
+        "committed": "2026-09-28T01:57:26Z"
+      },
+      "packages": [
+        { "ecosystem": "npm", "name": "@voltagent/core", "version": "2.11.0" }
+      ],
+      "size": { "shallow": "34 MB", "full_history": "34 MB", "files": 2883, "source_files": 1663 },
+      "verified": { "installed": true, "ran_code": true, "detail": "@voltagent/core exports Agent + 30+ symbols; Agent is a constructable class" }
+    },
+    {
+      "id": "agent-governance-toolkit",
+      "name": "Microsoft Agent Governance Toolkit (AGT)",
+      "org": "microsoft",
+      "repo": "microsoft/agent-governance-toolkit",
+      "url": "https://github.com/microsoft/agent-governance-toolkit.git",
+      "homepage": "https://microsoft.github.io/agent-governance-toolkit",
+      "path": "vendor/agent-governance-toolkit",
+      "languages": ["Python", "TypeScript", "Go", "Rust", ".NET"],
+      "license": "MIT",
+      "pin": {
+        "kind": "tag",
+        "tag": "v4.1.0",
+        "sha": "0de71ca6c95cf8b9b975ac96f48eaa7826bbe258",
+        "committed": "2026-06-09T23:11:24Z"
+      },
+      "packages": [
+        { "ecosystem": "pypi", "name": "agent-governance-toolkit", "version": "4.1.0", "note": "unified installer; provides module agent_compliance + CLIs agt / agent-governance / agent-governance-toolkit" },
+        { "ecosystem": "npm", "name": "@microsoft/agent-governance-sdk", "version": "see agent-governance-typescript/" },
+        { "ecosystem": "nuget", "name": "Microsoft.AgentGovernance", "version": "see agent-governance-dotnet/" }
+      ],
+      "size": { "shallow": "84 MB", "full_history": "48 MB", "files": 4982, "source_files": 2440 },
+      "verified": { "installed": true, "ran_code": true, "detail": "import agent_compliance (3.2.2); `agt --version` -> 4.1.0; CLI subcommands verify/integrity/lint-policy" }
+    },
+    {
+      "id": "codex-security",
+      "name": "OpenAI Codex Security",
+      "org": "openai",
+      "repo": "openai/codex-security",
+      "url": "https://github.com/openai/codex-security.git",
+      "homepage": "https://github.com/openai/codex-security",
+      "path": "vendor/codex-security",
+      "languages": ["TypeScript"],
+      "license": "Apache-2.0",
+      "pin": {
+        "kind": "tag",
+        "tag": "npm-v0.6.0",
+        "sha": "13dcc6fec00aaf4c23a6fa7e375ccc1726b22836",
+        "committed": "2026-10-22T11:43:47Z"
+      },
+      "packages": [
+        { "ecosystem": "npm", "name": "@openai/codex-security", "version": "0.6.0", "note": "installs `cs` and `codex-security` CLIs + TypeScript SDK" }
+      ],
+      "size": { "shallow": "28 MB", "full_history": "68 MB", "files": 1219, "source_files": 838 },
+      "verified": { "installed": true, "ran_code": true, "detail": "npx codex-security --version -> 0.6.0; bins cs + codex-security present" }
+    }
+  ]
+}

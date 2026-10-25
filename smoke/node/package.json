@@ -1,0 +1,18 @@
+{
+  "name": "@frameworks/smoke-node",
+  "private": true,
+  "type": "module",
+  "version": "1.0.0",
+  "description": "Smoke test for the TypeScript frameworks vendored in this repo",
+  "scripts": {
+    "smoke": "node smoke.mjs"
+  },
+  "dependencies": {
+    "@mastra/core": "1.79.0",
+    "@openai/codex-security": "0.6.0",
+    "@voltagent/core": "2.11.0"
+  },
+  "engines": {
+    "node": ">=22.13.0"
+  }
+}

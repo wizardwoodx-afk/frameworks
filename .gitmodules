@@ -1,0 +1,27 @@
+# Six agent frameworks/security SDKs pinned as git submodules.
+# Sources are NOT stored in this repository's history: each entry is a gitlink
+# (a pinned commit) plus the upstream URL. Run ./scripts/bootstrap.sh to materialise.
+
+[submodule "vendor/langgraph"]
+	path = vendor/langgraph
+	url = https://github.com/langchain-ai/langgraph.git
+
+[submodule "vendor/mastra"]
+	path = vendor/mastra
+	url = https://github.com/mastra-ai/mastra.git
+
+[submodule "vendor/beeai-framework"]
+	path = vendor/beeai-framework
+	url = https://github.com/i-am-bee/beeai-framework.git
+
+[submodule "vendor/voltagent"]
+	path = vendor/voltagent
+	url = https://github.com/VoltAgent/voltagent.git
+
+[submodule "vendor/agent-governance-toolkit"]
+	path = vendor/agent-governance-toolkit
+	url = https://github.com/microsoft/agent-governance-toolkit.git
+
+[submodule "vendor/codex-security"]
+	path = vendor/codex-security
+	url = https://github.com/openai/codex-security.git

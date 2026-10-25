@@ -1,0 +1,58 @@
+name: verify
+
+# Proves all six pinned packages install and execute. Deliberately does NOT check out
+# the submodules: this validates the published artifacts, which is what consumers import.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 6 * * 1'   # weekly drift check against the pins
+
+permissions:
+  contents: read
+
+jobs:
+  python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'      # BeeAI requires >=3.11,<3.14
+      - name: Install pinned wheels
+        run: pip install -r smoke/python/requirements.txt
+      - name: Run functional smoke tests
+        run: python smoke/python/smoke_test.py
+
+  node:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.13.0'     # Codex Security requires >=22.13 <22.x
+      - name: Install pinned packages
+        run: npm install --no-audit --no-fund --prefix smoke/node
+      - name: Run functional smoke tests
+        working-directory: smoke/node
+        run: node smoke.mjs
+
+  pin-drift:
+    # Read-only: tells you when an upstream release moves past the recorded pin.
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Report pin drift
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          chmod +x scripts/sync-pins.sh
+          ./scripts/sync-pins.sh | tee drift.txt
+      - name: Upload drift report
+        uses: actions/upload-artifact@v4
+        with:
+          name: pin-drift
+          path: drift.txt

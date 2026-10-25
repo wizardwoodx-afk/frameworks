@@ -1,0 +1,23 @@
+# Build/runtime artifacts — never commit these.
+.venv/
+venv/
+node_modules/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+dist/
+build/
+
+# Smoke-test leftovers
+smoke/python/*.json
+smoke/node/package-lock.json
+
+# Local overrides
+.env
+.env.local
+.DS_Store
+
+# NOTE: vendor/* are git submodules (gitlinks). Their contents are tracked by the
+# upstream repositories, not by this one — do not add ignore rules for them here.

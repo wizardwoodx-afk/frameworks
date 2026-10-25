@@ -1,0 +1,4 @@
+# Pinned to the versions recorded in MANIFEST.json (2026-10-25).
+langgraph==1.2.17
+beeai-framework==0.1.85
+agent-governance-toolkit==4.1.0
