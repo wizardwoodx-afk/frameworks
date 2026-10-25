@@ -9,6 +9,10 @@ pip install -e .          # from this directory
 python -m rister demo     # end-to-end walkthrough, no API key needed
 ```
 
+> **See the architecture:** [`../docs/architecture.html`](../docs/architecture.html) — the
+> module graph, the enforced import law, the six gates every tool call passes through, and a
+> measured trace, all generated from this source tree.
+
 - **Zero runtime dependencies.** Standard library only, Python 3.10+.
 - **One vocabulary.** A `State` flows through a `Graph`, an `Agent` writes to it, a
   `Guard` authorises every tool call, a `Tracer` records what happened.
@@ -424,7 +428,7 @@ Exit codes: `0` success, `1` findings or policy failure, `2` usage/error.
 ## Testing
 
 ```bash
-python -m rister.tests          # 72 tests, no third-party runner needed
+python -m rister.tests          # 80 tests, no third-party runner needed
 python -m rister.tests -v      # verbose
 python -m rister.tests govern   # one module
 pytest rister/tests             # also works if pytest is installed
@@ -434,7 +438,9 @@ The suite covers reducers, graph semantics (interrupts, retries, subgraphs, repl
 agent loops, memory, structured output, policies, guards, audit tampering, sandboxes,
 token expiry, prompt grading, supply-chain checks, the scanner (including suppressions),
 SARIF shape, tracers, evaluators, the HTTP surface over real sockets, the CLI, and
-debranding.
+debranding. `test_architecture.py` additionally parses the source with `ast` and fails the
+build on an import cycle, an undocumented cross-module dependency, or a third-party
+module-level import — see [`../docs/architecture.html`](../docs/architecture.html).
 
 ## Provenance
 

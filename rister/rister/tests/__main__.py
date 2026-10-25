@@ -21,6 +21,7 @@ MODULES = [
     "rister.tests.test_govern",
     "rister.tests.test_security_observe_evals",
     "rister.tests.test_debranding",
+    "rister.tests.test_architecture",
 ]
 
 

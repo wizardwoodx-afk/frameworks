@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RISTER — architecture</title>
+<style>
+  :root{
+    --bg:#0a0e13; --panel:#111823; --panel2:#0e141c; --line:#1e2937; --line2:#273546;
+    --text:#dbe5f0; --muted:#7f92a8; --dim:#5a6b7d;
+    --amber:#f0b429; --teal:#35c6a4; --blue:#5aa2ff; --red:#ea5b56; --violet:#a78bfa;
+    --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);
+       line-height:1.55;-webkit-font-smoothing:antialiased}
+  a{color:var(--blue);text-decoration:none}
+  code,.mono{font-family:var(--mono)}
+
+  /* ---------- shell ---------- */
+  .wrap{max-width:1180px;margin:0 auto;padding:0 28px 96px}
+  header.top{position:sticky;top:0;z-index:20;backdrop-filter:blur(12px);
+    background:rgba(10,14,19,.86);border-bottom:1px solid var(--line)}
+  .top-in{max-width:1180px;margin:0 auto;padding:12px 28px;display:flex;gap:18px;
+    align-items:center;flex-wrap:wrap}
+  .brand{font-family:var(--mono);font-weight:700;letter-spacing:.16em;font-size:14px}
+  .brand .dot{color:var(--amber)}
+  .chips{display:flex;gap:8px;flex-wrap:wrap;margin-left:auto}
+  .chip{font-family:var(--mono);font-size:11px;color:var(--muted);border:1px solid var(--line2);
+    padding:3px 9px;border-radius:999px;white-space:nowrap}
+  .chip b{color:var(--text);font-weight:600}
+
+  /* ---------- hero ---------- */
+  .hero{padding:56px 0 8px}
+  .eyebrow{font-family:var(--mono);font-size:11.5px;letter-spacing:.2em;color:var(--amber);
+    text-transform:uppercase;margin-bottom:14px}
+  h1{font-size:clamp(28px,4vw,44px);line-height:1.12;margin:0 0 16px;letter-spacing:-.02em;
+    font-weight:700}
+  h1 em{font-style:normal;color:var(--muted)}
+  .lede{font-size:16.5px;color:var(--muted);max-width:70ch;margin:0}
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:1px;
+    background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden;
+    margin:34px 0 0}
+  .stat{background:var(--panel2);padding:16px 18px}
+  .stat .n{font-family:var(--mono);font-size:23px;font-weight:600;color:var(--text);
+    letter-spacing:-.02em}
+  .stat .n small{font-size:12px;color:var(--dim);font-weight:400}
+  .stat .k{font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;color:var(--dim);
+    text-transform:uppercase;margin-top:4px}
+
+  /* ---------- sections ---------- */
+  section{margin-top:64px;scroll-margin-top:70px}
+  .sec-head{display:flex;align-items:baseline;gap:14px;border-bottom:1px solid var(--line);
+    padding-bottom:12px;margin-bottom:26px;flex-wrap:wrap}
+  .sec-num{font-family:var(--mono);font-size:11px;color:var(--amber);letter-spacing:.14em}
+  h2{font-size:21px;margin:0;font-weight:650;letter-spacing:-.01em}
+  .sec-sub{color:var(--dim);font-size:13.5px;margin-left:auto;font-family:var(--mono)}
+
+  /* ---------- two-column layout ---------- */
+  .split{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:22px;
+    align-items:start}
+  @media(max-width:900px){.split{grid-template-columns:1fr}}
+
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;
+    overflow:hidden}
+  .panel-h{padding:11px 16px;border-bottom:1px solid var(--line);font-family:var(--mono);
+    font-size:11px;letter-spacing:.13em;color:var(--dim);text-transform:uppercase;
+    display:flex;justify-content:space-between;gap:10px}
+  .panel-b{padding:16px}
+
+  /* ---------- module graph ---------- */
+  .graph-wrap{background:var(--panel);border:1px solid var(--line);border-radius:12px;
+    padding:6px}
+  svg{display:block;width:100%;height:auto}
+  .nbox{fill:#131b26;stroke:#2a3a4d;stroke-width:1.4;rx:9}
+  .nbox.core{fill:#1b2331;stroke:var(--amber);stroke-width:2}
+  .nlabel{font-family:var(--mono);font-size:15px;fill:#dbe5f0;font-weight:600}
+  .nloc{font-family:var(--mono);font-size:10.5px;fill:#66788c}
+  .nrole{font-family:var(--mono);font-size:10px;fill:#7f92a8;letter-spacing:.04em}
+  .edge{stroke:#33465c;stroke-width:1.5;fill:none}
+  .edge.hot{stroke:var(--teal);stroke-width:1.8;stroke-dasharray:5 4}
+  .caption{font-family:var(--mono);font-size:11.5px;color:var(--dim);padding:10px 14px 14px}
+
+  /* ---------- dependency matrix ---------- */
+  table.matrix{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:11.5px}
+  table.matrix th,table.matrix td{border:1px solid var(--line);padding:7px 4px;text-align:center}
+  table.matrix th{color:var(--dim);font-weight:500;font-size:9.5px;letter-spacing:.02em;white-space:nowrap}
+  table.matrix th.row{text-align:right;padding-right:10px;color:var(--text);font-size:11.5px}
+  table.matrix td.yes{color:var(--teal);font-weight:700}
+  table.matrix td.self{background:#161f2b;color:var(--dim)}
+  table.matrix td.no{color:#2c3a4c}
+  table.matrix td.hot{color:var(--amber);font-weight:700}
+  table.matrix tr.core-row th.row{color:var(--amber)}
+  .legend{margin-top:12px;font-size:12.5px;color:var(--muted);display:grid;gap:6px}
+  .legend b{color:var(--text);font-weight:600}
+
+  /* ---------- layer explorer ---------- */
+  .layers{display:flex;flex-direction:column;gap:6px}
+  .layer{display:flex;align-items:center;gap:12px;padding:11px 13px;border-radius:9px;
+    border:1px solid var(--line);background:var(--panel2);cursor:pointer;
+    transition:background .12s,border-color .12s;text-align:left}
+  .layer:hover{border-color:var(--line2);background:#131c27}
+  .layer[aria-selected="true"]{border-color:var(--amber);background:#1a2130}
+  .swatch{width:8px;height:34px;border-radius:3px;flex:none}
+  .layer .nm{font-family:var(--mono);font-size:13px;font-weight:600}
+  .layer .ds{font-size:11.5px;color:var(--dim);margin-top:1px}
+  .layer .lo{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--muted);
+    text-align:right;flex:none}
+  .detail h3{margin:0 0 4px;font-size:17px;font-weight:650}
+  .detail .files{font-family:var(--mono);font-size:11.5px;color:var(--dim);margin-bottom:14px}
+  .detail p{margin:0 0 14px;color:var(--muted);font-size:14px}
+  .classlist{display:grid;gap:1px;background:var(--line);border:1px solid var(--line);
+    border-radius:8px;overflow:hidden}
+  .cls{background:var(--panel2);padding:8px 12px;display:flex;gap:12px;align-items:baseline}
+  .cls .cn{font-family:var(--mono);font-size:12px;color:var(--teal);flex:none;min-width:150px}
+  .cls .cd{font-size:11.5px;color:var(--dim)}
+  .pubs{margin-top:14px;font-family:var(--mono);font-size:11px;color:var(--dim);
+    display:flex;flex-wrap:wrap;gap:5px}
+  .pubs span{border:1px solid var(--line2);border-radius:5px;padding:2px 7px;color:var(--muted)}
+
+  /* ---------- waterfall ---------- */
+  .wf{display:grid;gap:3px;font-family:var(--mono);font-size:11.5px}
+  .wf-row{display:grid;grid-template-columns:232px 1fr 84px;gap:12px;align-items:center}
+  .wf-name{color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .wf-name .dep{color:var(--dim)}
+  .wf-track{position:relative;height:19px;background:#0c1219;border-radius:4px;
+    border:1px solid #16202c}
+  .wf-bar{position:absolute;top:2px;bottom:2px;border-radius:3px;min-width:3px}
+  .wf-ms{text-align:right;color:var(--dim);font-size:10.5px}
+  .wf-row.span-run .wf-bar{background:var(--amber)}
+  .wf-row.span-node .wf-bar{background:var(--blue)}
+  .wf-row.span-agent .wf-bar{background:var(--violet)}
+  .wf-row.span-model .wf-bar{background:#4a6b8a}
+  .wf-row.span-tool .wf-bar{background:var(--teal)}
+  .wf-note{margin-top:14px;padding:12px 14px;border-left:2px solid var(--teal);
+    background:#0e1620;border-radius:0 6px 6px 0;font-size:13px;color:var(--muted)}
+  .wf-note b{color:var(--text)}
+
+  /* ---------- runtime path ---------- */
+  .path{display:flex;flex-direction:column;gap:0}
+  .step{display:grid;grid-template-columns:34px 1fr;gap:14px;position:relative}
+  .step:not(:last-child) .mark::after{content:"";position:absolute;left:16px;top:34px;
+    bottom:-6px;width:1px;background:var(--line2)}
+  .mark{width:34px;display:flex;justify-content:center;padding-top:2px}
+  .dotn{width:26px;height:26px;border-radius:50%;border:1px solid var(--line2);
+    display:flex;align-items:center;justify-content:center;font-family:var(--mono);
+    font-size:11px;color:var(--muted);background:var(--panel2);z-index:1}
+  .step.gate .dotn{border-color:var(--amber);color:var(--amber)}
+  .body{padding:0 0 20px}
+  .body .t{font-family:var(--mono);font-size:12.5px;color:var(--text);font-weight:600}
+  .body .d{font-size:13px;color:var(--muted);margin-top:3px}
+  .body .c{font-family:var(--mono);font-size:11px;color:var(--dim);margin-top:5px}
+  .body .c em{color:var(--teal);font-style:normal}
+
+  /* ---------- invariants ---------- */
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:14px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:18px}
+  .card .k{font-family:var(--mono);font-size:10.5px;letter-spacing:.13em;color:var(--amber);
+    text-transform:uppercase}
+  .card h4{margin:9px 0 7px;font-size:15px;font-weight:650}
+  .card p{margin:0;font-size:13px;color:var(--muted)}
+  .card code{font-size:11.5px;color:var(--teal);background:#0d1520;padding:1px 5px;
+    border-radius:4px;border:1px solid #1a2532}
+
+  footer{margin-top:70px;padding-top:22px;border-top:1px solid var(--line);
+    font-family:var(--mono);font-size:11.5px;color:var(--dim);display:flex;gap:18px;
+    flex-wrap:wrap;justify-content:space-between}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="top-in">
+    <div class="brand">RISTER<span class="dot">.</span>architecture</div>
+    <div class="chips">
+      <div class="chip"><b>0</b> runtime deps</div>
+      <div class="chip"><b>7,980</b> LOC</div>
+      <div class="chip"><b>96</b> exports</div>
+      <div class="chip"><b>80</b> tests</div>
+      <div class="chip">python <b>3.10+</b></div>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <!-- ================= HERO ================= -->
+  <div class="hero">
+    <div class="eyebrow">system design · v1.0.0</div>
+    <h1>A dependency hub, <em>not a tower of layers.</em></h1>
+    <p class="lede">Every subsystem depends on <code class="mono">core</code> and on nothing
+      else — with exactly two deliberate cross-links. That flatness is the point: any part of
+      RISTER can be imported and used alone, and the composition you see at runtime is built
+      from objects, not from import order.</p>
+
+    <div class="stats">
+      <div class="stat"><div class="n">13</div><div class="k">modules</div></div>
+      <div class="stat"><div class="n">46</div><div class="k">files</div></div>
+      <div class="stat"><div class="n">7,980</div><div class="k">significant LOC</div></div>
+      <div class="stat"><div class="n">111</div><div class="k">public classes</div></div>
+      <div class="stat"><div class="n">17</div><div class="k">exception types</div></div>
+      <div class="stat"><div class="n">0</div><div class="k">third-party imports</div></div>
+    </div>
+  </div>
+
+  <!-- ================= 01 MODULE GRAPH ================= -->
+  <section id="modules">
+    <div class="sec-head">
+      <span class="sec-num">01</span>
+      <h2>The module graph</h2>
+      <span class="sec-sub">verified by test_architecture.py</span>
+    </div>
+
+    <div class="split">
+      <div class="graph-wrap">
+        <svg viewBox="0 0 1000 560" role="img" aria-label="RISTER module dependency graph">
+          <defs>
+            <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7"
+                    markerHeight="7" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="#33465c"/>
+            </marker>
+            <marker id="arrowHot" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7"
+                    markerHeight="7" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="#35c6a4"/>
+            </marker>
+          </defs>
+
+          <!-- edges: dependent -> dependency -->
+          <line class="edge" x1="245" y1="166" x2="425" y2="252" marker-end="url(#arrow)"/>
+          <line class="edge" x1="320" y1="278" x2="425" y2="278" marker-end="url(#arrow)"/>
+          <line class="edge" x1="245" y1="390" x2="425" y2="304" marker-end="url(#arrow)"/>
+          <line class="edge" x1="755" y1="166" x2="575" y2="252" marker-end="url(#arrow)"/>
+          <line class="edge" x1="680" y1="278" x2="575" y2="278" marker-end="url(#arrow)"/>
+          <line class="edge" x1="755" y1="390" x2="575" y2="304" marker-end="url(#arrow)"/>
+          <line class="edge" x1="500" y1="116" x2="500" y2="250" marker-end="url(#arrow)"/>
+          <line class="edge" x1="500" y1="440" x2="500" y2="306" marker-end="url(#arrow)"/>
+          <!-- the two deliberate cross-links -->
+          <line class="edge hot" x1="230" y1="250" x2="230" y2="166" marker-end="url(#arrowHot)"/>
+          <text class="nrole" x="245" y="214" fill="#35c6a4">imports state</text>
+          <text class="nrole" x="596" y="86" fill="#35c6a4">imports agent</text>
+
+          <!-- boxes -->
+          <rect class="nbox" x="170" y="110" width="150" height="56" rx="9"/>
+          <text class="nlabel" x="190" y="134">state</text>
+          <text class="nloc" x="190" y="152">240 loc · reducers</text>
+
+          <rect class="nbox" x="170" y="250" width="150" height="56" rx="9"/>
+          <text class="nlabel" x="190" y="274">graph</text>
+          <text class="nloc" x="190" y="292">849 loc · engine</text>
+
+          <rect class="nbox" x="170" y="390" width="150" height="56" rx="9"/>
+          <text class="nlabel" x="190" y="414">agent</text>
+          <text class="nloc" x="190" y="432">1,262 loc · runtime</text>
+
+          <rect class="nbox core" x="425" y="250" width="150" height="56" rx="9"/>
+          <text class="nlabel" x="447" y="274" fill="#f0b429">core</text>
+          <text class="nloc" x="447" y="292">397 loc · 0 imports</text>
+
+          <rect class="nbox" x="680" y="110" width="150" height="56" rx="9"/>
+          <text class="nlabel" x="700" y="134">govern</text>
+          <text class="nloc" x="700" y="152">1,867 loc · policy</text>
+
+          <rect class="nbox" x="680" y="250" width="150" height="56" rx="9"/>
+          <text class="nlabel" x="700" y="274">observe</text>
+          <text class="nloc" x="700" y="292">233 loc · tracing</text>
+
+          <rect class="nbox" x="680" y="390" width="150" height="56" rx="9"/>
+          <text class="nlabel" x="700" y="414">security</text>
+          <text class="nloc" x="700" y="432">824 loc · scanning</text>
+
+          <rect class="nbox" x="425" y="60" width="150" height="56" rx="9"/>
+          <text class="nlabel" x="447" y="84">evals</text>
+          <text class="nloc" x="447" y="102">421 loc · scorers</text>
+
+          <rect class="nbox" x="425" y="440" width="150" height="56" rx="9"/>
+          <text class="nlabel" x="447" y="464">serve</text>
+          <text class="nloc" x="447" y="482">166 loc · http</text>
+
+          <!-- legends -->
+          <text class="nrole" x="30" y="76">EVERY BOX BELOW IMPORTS</text>
+          <text class="nrole" x="30" y="92">core AND NOTHING ELSE</text>
+          <text class="nrole" x="30" y="500">— — two deliberate cross-links</text>
+          <text class="nrole" x="30" y="516">graph → state · evals → agent</text>
+        </svg>
+        <div class="caption">
+          Arrows point at the dependency. <b style="color:#35c6a4">Teal</b> dashed lines are the
+          only non-core imports in the whole package: <code class="mono">graph</code> reuses the
+          reducer algebra from <code class="mono">state</code>, and
+          <code class="mono">evals</code> accepts an agent as an evaluation target.
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-h"><span>import law</span><span>0 cycles · enforced</span></div>
+        <div class="panel-b">
+          <table class="matrix" id="matrix">
+            <thead id="matrix-head"></thead>
+            <tbody id="matrix-body"></tbody>
+          </table>
+          <div class="legend">
+            <div><b>core imports nothing.</b> It holds <code class="mono">Message</code>,
+              <code class="mono">ToolCall</code>, <code class="mono">Config</code> and all 17
+              exception types, so every other module can depend on it without a cycle.</div>
+            <div><b>No cycles, by construction.</b> <code class="mono">test_architecture.py</code>
+              parses every file with <code class="mono">ast</code>, walks the import graph and
+              fails the build on a cycle, on an undocumented cross-edge, or on a third-party
+              module-level import.</div>
+            <div><b>Composition lives at the edge.</b> <code class="mono">rister/__init__.py</code>
+              and <code class="mono">demo.py</code> import everything; that is where the
+              framework is assembled, never inside a subsystem.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 02 LAYER EXPLORER ================= -->
+  <section id="layers">
+    <div class="sec-head">
+      <span class="sec-num">02</span>
+      <h2>What is inside each module</h2>
+      <span class="sec-sub">click a module</span>
+    </div>
+    <div class="split">
+      <div class="layers" id="layer-list" role="tablist" aria-label="modules"></div>
+      <div class="panel detail" id="layer-detail">
+        <div class="panel-h"><span id="detail-head">select a module</span><span>real classes</span></div>
+        <div class="panel-b" id="detail-body"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 03 RUNTIME PATH ================= -->
+  <section id="runtime">
+    <div class="sec-head">
+      <span class="sec-num">03</span>
+      <h2>The runtime path of one tool call</h2>
+      <span class="sec-sub">six gates, one entry point</span>
+    </div>
+
+    <div class="split">
+      <div class="panel">
+        <div class="panel-h"><span>every tool call traverses this</span><span>no bypass</span></div>
+        <div class="panel-b path">
+          <div class="step">
+            <div class="mark"><div class="dotn">01</div></div>
+            <div class="body">
+              <div class="t">model.complete()</div>
+              <div class="d">The model returns a <code class="mono">ToolCall</code>. It has
+                proposed an action; nothing has happened yet.</div>
+              <div class="c">→ span <em>model:&lt;agent&gt;</em></div>
+            </div>
+          </div>
+          <div class="step">
+            <div class="mark"><div class="dotn">02</div></div>
+            <div class="body">
+              <div class="t">ToolRegistry.call()</div>
+              <div class="d">The <em>only</em> way to execute a tool. Agents call it; graph
+                nodes call it; there is no second path.</div>
+              <div class="c">→ span <em>tool:&lt;name&gt;</em></div>
+            </div>
+          </div>
+          <div class="step gate">
+            <div class="mark"><div class="dotn">03</div></div>
+            <div class="body">
+              <div class="t">Guard.check()</div>
+              <div class="d">Policy is evaluated against the action, the arguments and the
+                signed subject identity.</div>
+              <div class="c">→ <em>allow</em> · <em>deny</em> · <em>approve</em></div>
+            </div>
+          </div>
+          <div class="step gate">
+            <div class="mark"><div class="dotn">04</div></div>
+            <div class="body">
+              <div class="t">Approver.request()</div>
+              <div class="d">Only when the effect is <code class="mono">approve</code>. A human
+                ticket, a callback, or an auto-predicate decides.</div>
+              <div class="c">→ <em>ticket approved / refused</em></div>
+            </div>
+          </div>
+          <div class="step gate">
+            <div class="mark"><div class="dotn">05</div></div>
+            <div class="body">
+              <div class="t">AuditLog.record()</div>
+              <div class="d">The decision — including denials — is written to a hash chain.
+                Any later edit breaks verification.</div>
+              <div class="c">→ hash = H(prev ‖ payload)</div>
+            </div>
+          </div>
+          <div class="step">
+            <div class="mark"><div class="dotn">06</div></div>
+            <div class="body">
+              <div class="t">tool body executes … or does not</div>
+              <div class="d">A refusal never raises into the loop: it is fed back to the model
+                as tool output, so the agent can choose another route.</div>
+              <div class="c">→ result · or <em>DENIED: reason</em></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-h"><span>real trace · one measured run</span><span id="wf-total"></span></div>
+        <div class="panel-b">
+          <div class="wf" id="waterfall"></div>
+          <div class="wf-note">
+            <b>The span tree proves the path.</b> <code class="mono">tool:search_notes</code>
+            nests inside <code class="mono">agent:analyst</code>, which nests inside
+            <code class="mono">node:think</code>, inside <code class="mono">run:pipeline</code>.
+            If a tool could run unguarded, it would appear outside that nesting — the tracer
+            makes the bypass visible.
+          </div>
+          <div class="legend" style="margin-top:14px">
+            <div><b>Microseconds, not milliseconds.</b> These are the durations this run actually
+              recorded; the graph engine adds almost nothing around your code.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 04 STATE FLOW ================= -->
+  <section id="state">
+    <div class="sec-head">
+      <span class="sec-num">04</span>
+      <h2>How state moves through a graph</h2>
+      <span class="sec-sub">immutable merge · supersteps</span>
+    </div>
+
+    <div class="panel">
+      <div class="panel-h"><span>one superstep</span><span>deterministic by construction</span></div>
+      <div class="panel-b">
+        <svg viewBox="0 0 1100 240" role="img" aria-label="State flow through one superstep">
+          <defs>
+            <marker id="a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7"
+                    markerHeight="7" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="#3d5268"/>
+            </marker>
+          </defs>
+          <!-- input state -->
+          <rect x="20" y="78" width="150" height="84" rx="9" fill="#131b26" stroke="#2a3a4d"/>
+          <text x="40" y="104" class="nlabel" font-size="13">State</text>
+          <text x="40" y="124" class="nloc">notes: []</text>
+          <text x="40" y="140" class="nloc">score: 0</text>
+          <text x="40" y="156" class="nrole">frozen input</text>
+
+          <line class="edge" x1="176" y1="120" x2="240" y2="120" marker-end="url(#a2)"/>
+
+          <!-- frontier -->
+          <rect x="246" y="30" width="200" height="62" rx="9" fill="#131b26" stroke="#2a3a4d"/>
+          <text x="264" y="54" class="nlabel" font-size="13">node: research</text>
+          <text x="264" y="74" class="nloc">sees the same input</text>
+
+          <rect x="246" y="112" width="200" height="62" rx="9" fill="#131b26" stroke="#2a3a4d"/>
+          <text x="264" y="136" class="nlabel" font-size="13">node: audit</text>
+          <text x="264" y="156" class="nloc">sees the same input</text>
+
+          <rect x="246" y="176" width="200" height="50" rx="9" fill="#131b26" stroke="#2a3a4d"/>
+          <text x="264" y="198" class="nlabel" font-size="13">node: score</text>
+          <text x="264" y="214" class="nloc">sees the same input</text>
+
+          <line class="edge hot" x1="452" y1="61" x2="520" y2="61" marker-end="url(#arrowHot)"/>
+          <line class="edge hot" x1="452" y1="143" x2="520" y2="143" marker-end="url(#arrowHot)"/>
+          <line class="edge hot" x1="452" y1="201" x2="520" y2="201" marker-end="url(#arrowHot)"/>
+
+          <!-- updates -->
+          <rect x="526" y="30" width="176" height="62" rx="9" fill="#0f1a20" stroke="#1f5348"/>
+          <text x="544" y="54" class="nloc" fill="#35c6a4">{"notes": ["a"]}</text>
+          <text x="544" y="74" class="nrole">partial update</text>
+
+          <rect x="526" y="112" width="176" height="62" rx="9" fill="#0f1a20" stroke="#1f5348"/>
+          <text x="544" y="136" class="nloc" fill="#35c6a4">{"notes": ["b"]}</text>
+          <text x="544" y="156" class="nrole">partial update</text>
+
+          <rect x="526" y="176" width="176" height="50" rx="9" fill="#0f1a20" stroke="#1f5348"/>
+          <text x="544" y="198" class="nloc" fill="#35c6a4">{"score": 5}</text>
+          <text x="544" y="214" class="nrole">partial update</text>
+
+          <line class="edge" x1="708" y1="61" x2="776" y2="110" marker-end="url(#a2)"/>
+          <line class="edge" x1="708" y1="143" x2="776" y2="122" marker-end="url(#a2)"/>
+          <line class="edge" x1="708" y1="201" x2="776" y2="134" marker-end="url(#a2)"/>
+
+          <!-- reducer -->
+          <rect x="782" y="70" width="130" height="86" rx="9" fill="#1b2331" stroke="#f0b429"
+                stroke-width="2"/>
+          <text x="800" y="96" class="nlabel" font-size="13" fill="#f0b429">reducers</text>
+          <text x="800" y="116" class="nloc">Append · Sum</text>
+          <text x="800" y="132" class="nloc">Unique · Merge</text>
+          <text x="800" y="148" class="nrole">declared on State</text>
+
+          <line class="edge" x1="918" y1="113" x2="972" y2="113" marker-end="url(#a2)"/>
+
+          <!-- next state -->
+          <rect x="978" y="78" width="104" height="84" rx="9" fill="#131b26" stroke="#2a3a4d"/>
+          <text x="996" y="104" class="nlabel" font-size="13">State′</text>
+          <text x="996" y="124" class="nloc">notes: [a,b]</text>
+          <text x="996" y="140" class="nloc">score: 5</text>
+          <text x="996" y="156" class="nrole">new object</text>
+        </svg>
+      </div>
+    </div>
+
+    <div class="cards" style="margin-top:16px">
+      <div class="card">
+        <div class="k">invariant 01</div>
+        <h4>Merged, never mutated</h4>
+        <p>Nodes return partial updates. The reducer declared on the field decides how they
+          combine, so <code>notes</code> concatenates while <code>score</code> accumulates.</p>
+      </div>
+      <div class="card">
+        <div class="k">invariant 02</div>
+        <h4>One frontier, one input</h4>
+        <p>All nodes in a superstep receive the <em>same</em> state object. Parallel branches
+          cannot race, and replay reproduces the run exactly.</p>
+      </div>
+      <div class="card">
+        <div class="k">invariant 03</div>
+        <h4>Unknown fields are rejected</h4>
+        <p>A typo in an update raises with the list of valid names instead of silently creating
+          a key that nothing will ever read.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 05 NUMBERS ================= -->
+  <section id="numbers">
+    <div class="sec-head">
+      <span class="sec-num">05</span>
+      <h2>Where the code actually lives</h2>
+      <span class="sec-sub">significant lines · comments excluded</span>
+    </div>
+    <div class="panel">
+      <div class="panel-b" id="bars"></div>
+    </div>
+    <div class="cards" style="margin-top:16px">
+      <div class="card"><div class="k">asymmetry</div><h4>govern is the largest module</h4>
+        <p>1,867 lines — 22% of the framework, and more than <code>graph</code> and
+          <code>state</code> combined. Governance is the product; orchestration is the easy
+          part.</p></div>
+      <div class="card"><div class="k">discipline</div><h4>core is 397 lines and imports nothing</h4>
+        <p>A small, dependency-free core is what keeps nine subsystems from turning into a
+          tangle of cross-imports.</p></div>
+      <div class="card"><div class="k">verification</div><h4>1,251 lines of tests</h4>
+        <p>80 tests across 8 files, runnable with no third-party runner. Two of those files
+          test the architecture itself: the dependency law and brand-neutrality.</p></div>
+    </div>
+  </section>
+
+  <footer>
+    <div>RISTER 1.0.0 · generated from the source tree · 46 files · 7,980 significant LOC</div>
+    <div>zero runtime dependencies · stdlib only · python 3.10+</div>
+  </footer>
+</div>
+
+<script>
+const DATA = {
+  modules: [
+    {id:"core", loc:397, files:"3 files", colour:"#f0b429",
+     desc:"The dependency-free floor: message and tool-call types, per-run configuration, and one exception hierarchy that every other module raises.",
+     classes:[["Message","A single conversational turn."],
+              ["ToolCall","A request to run a named tool with JSON arguments."],
+              ["Completion","A model response."],
+              ["Usage","Token accounting."],
+              ["Config","Per-run settings threaded through graphs, agents and tools."],
+              ["RisterError","Base class for every RISTER error."],
+              ["Interrupt","Pause the run and hand control back to the caller."]],
+     pub:["Message","ToolCall","Usage","Completion","Config","Role","RisterError","PolicyDenied","ToolError","ModelError"]},
+    {id:"state", loc:240, files:"1 file", colour:"#5aa2ff",
+     desc:"The merge algebra. A State declares typed fields, each bound to a reducer that defines how incoming updates combine.",
+     classes:[["State","A typed bag of values merged through reducers."],
+              ["Reducer","Combines a current value with an incoming update."],
+              ["Last","Replace the previous value (the default)."],
+              ["Append","Extend a list, preserving order."],
+              ["Unique","Append items that are not already present."],
+              ["Merge","Shallow-merge mappings."],
+              ["Sum","Add numbers — counters and token totals."],
+              ["Max / Min","Keep the extreme value."]],
+     pub:["State","Reducer","Last","Append","Unique","Merge","Sum","Max","Min"]},
+    {id:"graph", loc:849, files:"5 files", colour:"#7fb4ff",
+     desc:"The engine: nodes, static and conditional edges, supersteps, retries, interrupts, snapshots, replay, sub-graphs.",
+     classes:[["Graph","Declare a stateful computation as nodes and edges."],
+              ["CompiledGraph","invoke, stream, resume, replay, history."],
+              ["NodeContext","Runtime handle passed to nodes that take two arguments."],
+              ["Command","A state update plus explicit routing (goto)."],
+              ["Snapshot","A point-in-time view of one thread."],
+              ["SnapshotStore","The persistence interface."],
+              ["MemorySnapshotStore","In-process, keeps full history."],
+              ["FileSnapshotStore","Append-only JSONL per thread."]],
+     pub:["Graph","CompiledGraph","Command","goto","START","END","Snapshot","NodeContext"]},
+    {id:"agent", loc:1262, files:"6 files", colour:"#a78bfa",
+     desc:"The agent loop and everything it needs: model backends, typed tools, memory stores, prompt templates.",
+     classes:[["Agent","A model, instructions, tools and memory wired into a loop."],
+              ["Model","Base class for a chat backend — implement complete()."],
+              ["ScriptedModel","Replay a fixed list of replies (deterministic)."],
+              ["HTTPModel","Any chat-completions-shaped endpoint. No vendor default."],
+              ["RouterModel","Pick a backend per request."],
+              ["Tool / ToolRegistry","Typed callables and the single execution choke point."],
+              ["Memory / MemoryStore","What to remember vs. what to show the model."],
+              ["Prompt","A {placeholder} template with named defaults."]],
+     pub:["Agent","ScriptedModel","HTTPModel","RouterModel","tool","Memory","Prompt","Tool"]},
+    {id:"govern", loc:1867, files:"9 files", colour:"#f0b429",
+     desc:"Deterministic enforcement: policy, the guard, signed identity, approvals, the audit chain, capability rings, prompt and dependency audits.",
+     classes:[["Policy / Rule","Ordered rules, glob actions, argument predicates."],
+              ["Guard","Authorise, approve, audit, or refuse — one check()."],
+              ["Identity / Signer","Who is acting; HMAC-SHA256 capability tokens."],
+              ["QueueApprover","Ticket, then block for an explicit decision."],
+              ["AuditLog","Append-only hash chain; verify() detects any edit."],
+              ["Sandbox / Ring","Rooted filesystem jail; ROOT→UNTRUSTED tiers."],
+              ["PromptDefense","Score a system prompt against 12 vectors."],
+              ["SupplyChainGuard","Unpinned, range and typosquat detection."]],
+     pub:["Policy","PolicySet","Guard","AuditLog","Identity","Signer","Sandbox","Ring","AutoApprover","QueueApprover"]},
+    {id:"observe", loc:233, files:"3 files", colour:"#35c6a4",
+     desc:"Spans that nest, and exporters that are just functions. Tracing is local unless you hand it somewhere.",
+     classes:[["Tracer","Collects spans; hands finished traces to exporters."],
+              ["Span","One timed unit of work, with parent_id and attributes."],
+              ["JSONLExporter","One JSON object per trace."],
+              ["ConsoleExporter","A compact tree of finished traces."],
+              ["CallableExporter","Hand the payload to any function."]],
+     pub:["Tracer","Span","JSONLExporter","ConsoleExporter"]},
+    {id:"security", loc:824, files:"4 files", colour:"#ea5b56",
+     desc:"A deterministic scanner: 18 rules, inline suppressions that are recorded rather than hidden, SARIF/JSON/MD/CSV output.",
+     classes:[["Scanner","Apply rules to files or directories."],
+              ["Rule","One detectable pattern — data, not code."],
+              ["Finding","One rule hit at one location, with a stable fingerprint."],
+              ["Suppression","A finding an inline directive deliberately silenced."],
+              ["ScanReport","Findings, coverage, suppressions, SARIF export."]],
+     pub:["Scanner","ScanReport","Finding","Suppression","scan","get_rules","draft_security_policy"]},
+    {id:"evals", loc:421, files:"3 files", colour:"#5aa2ff",
+     desc:"Deterministic scorers first, model judges clearly labelled. Suites produce a diffable report.",
+     classes:[["Suite","A named set of cases scored by one or more scorers."],
+              ["Case","One input with its expectations."],
+              ["Exact / Contains / Regex","String-level checks."],
+              ["JsonKeys","JSON with the expected keys and types."],
+              ["NumericClose","A number within tolerance."],
+              ["ModelJudge","Subjective grading — not reproducible."],
+              ["Report","Pass rate, mean score, markdown and JSON."]],
+     pub:["Suite","Case","Report","Exact","Contains","JsonKeys","NumericClose","evaluate"]},
+    {id:"serve", loc:166, files:"1 file", colour:"#7f92a8",
+     desc:"A stdlib HTTP surface: JSON routes for agents and graphs, optional bearer auth, honest status codes.",
+     classes:[["App","Routes agents and graphs over HTTP."],
+              ["App.handle","Pure routing — testable without a socket."],
+              ["App.make_server","Real server, standard library only."]],
+     pub:["App","create_app"]},
+    {id:"demo", loc:186, files:"1 file", colour:"#7f92a8",
+     desc:"The offline walkthrough: pauses a graph, resumes it, refuses a tool, verifies the audit chain, scans its own source.",
+     classes:[["run_demo","Eight sections, no API key, no network."]],
+     pub:["run_demo"]}
+  ],
+  matrix: {
+    cols:["core","state","graph","agent","govern","observe","security","evals","serve"],
+    rows:[["core",{}],
+          ["state",{"core":1}],
+          ["graph",{"core":1,"state":1}],
+          ["agent",{"core":1}],
+          ["govern",{"core":1}],
+          ["observe",{"core":1}],
+          ["security",{"core":1}],
+          ["evals",{"core":1,"agent":1}],
+          ["serve",{"core":1}]]
+  },
+  trace: [
+    {name:"run:pipeline",  kind:"run",   dep:0, start:0.000, dur:0.300, attrs:"steps=1"},
+    {name:"node:think",    kind:"node",  dep:1, start:0.044, dur:0.195, attrs:"step=1"},
+    {name:"agent:analyst", kind:"agent", dep:2, start:0.065, dur:0.170, attrs:"turns=2"},
+    {name:"model:analyst", kind:"model", dep:3, start:0.093, dur:0.049, attrs:"turn=1"},
+    {name:"tool:search_notes", kind:"tool", dep:3, start:0.175, dur:0.010, attrs:"guarded"},
+    {name:"model:analyst", kind:"model", dep:3, start:0.210, dur:0.009, attrs:"turn=2"}
+  ]
+};
+
+/* ---------- dependency matrix ---------- */
+(function(){
+  const {cols, rows} = DATA.matrix;
+  const head = document.getElementById("matrix-head");
+  head.innerHTML = "<tr><th></th>" +
+    cols.map(c => `<th style="font-size:9px;white-space:nowrap">${c}</th>`).join("") + "</tr>";
+  const body = document.getElementById("matrix-body");
+  body.innerHTML = rows.map(([name, deps]) => {
+    const cells = cols.map(c => {
+      if (c === name) return `<td class="self">·</td>`;
+      if (deps[c]) return `<td class="yes">✓</td>`;
+      return `<td class="no">—</td>`;
+    }).join("");
+    return `<tr class="${name === 'core' ? 'core-row' : ''}">
+      <th class="row">${name}</th>${cells}</tr>`;
+  }).join("");
+})();
+
+/* ---------- layer explorer ---------- */
+(function(){
+  const list = document.getElementById("layer-list");
+  const head = document.getElementById("detail-head");
+  const body = document.getElementById("detail-body");
+
+  function show(id){
+    const m = DATA.modules.find(x => x.id === id);
+    if (!m) return;
+    [...list.children].forEach(el =>
+      el.setAttribute("aria-selected", el.dataset.id === id ? "true" : "false"));
+    head.textContent = m.id;
+    body.innerHTML = `
+      <h3>${m.id}</h3>
+      <div class="files">${m.loc} significant lines · ${m.files}</div>
+      <p>${m.desc}</p>
+      <div class="classlist">
+        ${m.classes.map(([n,d]) => `<div class="cls">
+            <span class="cn">${n}</span><span class="cd">${d}</span></div>`).join("")}
+      </div>
+      <div class="pubs">${m.pub.map(p => `<span>${p}</span>`).join("")}</div>`;
+  }
+
+  DATA.modules.forEach((m, i) => {
+    const b = document.createElement("button");
+    b.className = "layer";
+    b.dataset.id = m.id;
+    b.setAttribute("role", "tab");
+    b.innerHTML = `<span class="swatch" style="background:${m.colour}"></span>
+      <span><span class="nm">${m.id}</span>
+      <span class="ds">${m.classes.length} classes</span></span>
+      <span class="lo">${m.loc.toLocaleString()}<br>loc</span>`;
+    b.onclick = () => show(m.id);
+    list.appendChild(b);
+    if (i === 0) show(m.id);
+  });
+})();
+
+/* ---------- waterfall ---------- */
+(function(){
+  const wf = document.getElementById("waterfall");
+  const total = Math.max(...DATA.trace.map(t => t.start + t.dur));
+  document.getElementById("wf-total").textContent = total.toFixed(3) + " ms total";
+  wf.innerHTML = DATA.trace.map(t => {
+    const left = (t.start / total) * 100;
+    const width = Math.max((t.dur / total) * 100, 0.6);
+    return `<div class="wf-row span-${t.kind}">
+      <div class="wf-name" style="padding-left:${t.dep * 11}px">
+        <span class="dep">${"· ".repeat(t.dep)}</span>${t.name}</div>
+      <div class="wf-track"><div class="wf-bar"
+        style="left:${left}%;width:${width}%"></div></div>
+      <div class="wf-ms">${(t.dur * 1000).toFixed(0)} µs</div>
+    </div>`;
+  }).join("");
+})();
+
+/* ---------- loc bars ---------- */
+(function(){
+  const bars = document.getElementById("bars");
+  const items = DATA.modules.slice().sort((a,b) => b.loc - a.loc);
+  const max = items[0].loc;
+  bars.innerHTML = items.map(m => `
+    <div style="display:grid;grid-template-columns:92px 1fr 66px;gap:14px;align-items:center;
+                margin-bottom:7px">
+      <div class="mono" style="font-size:12px;color:#dbe5f0">${m.id}</div>
+      <div style="height:16px;background:#0c1219;border-radius:4px;border:1px solid #16202c">
+        <div style="height:100%;width:${(m.loc/max*100).toFixed(1)}%;
+          background:${m.colour};border-radius:3px;opacity:.85"></div>
+      </div>
+      <div class="mono" style="font-size:11px;color:#7f92a8;text-align:right">
+        ${m.loc.toLocaleString()}</div>
+    </div>`).join("");
+})();
+</script>
+</body>
+</html>

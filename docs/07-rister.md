@@ -6,8 +6,10 @@ API, with a single set of types, one error hierarchy and one vocabulary.
 
 - **Package:** [`rister/`](../rister/) — Python 3.10+, zero runtime dependencies
 - **Version:** 1.0.0
-- **Tests:** 72 (including a suite that enforces brand-neutrality)
+- **Tests:** 80 (including a suite that enforces brand-neutrality)
 - **Try it:** `cd rister && python -m rister demo`
+- **Architecture:** [`architecture.html`](architecture.html) — an interactive map of the
+  module graph, the import law and the runtime call path
 
 ---
 
